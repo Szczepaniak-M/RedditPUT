@@ -1,38 +1,59 @@
 #include <sqlite3.h>
 #include <stdio.h>
 
+static int callback(void *NotUsed, int argc, char **argv, char **azColName) {
+   int i;
+   for(i = 0; i<argc; i++) {
+      printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+   }
+   printf("\n");
+   return 0;
+}
+
 int main(void) {
     
     sqlite3 *db;
-    sqlite3_stmt *res;
+    char *zErrMsg = 0;
+    int rc;
+    char *sql;
     
-    int rc = sqlite3_open(":memory:", &db);
+    rc = sqlite3_open("server.db", &db);
     
     if (rc != SQLITE_OK) {
-        
         fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));
         sqlite3_close(db);
-        
         return 1;
     }
     
-    rc = sqlite3_prepare_v2(db, "SELECT SQLITE_VERSION()", -1, &res, 0);    
+    sql = "CREATE TABLE IF NOT EXISTS USER("  \
+        "ID             INTEGER     PRIMARY KEY     AUTOINCREMENT   NOT NULL," \
+        "NAME           TEXT    NOT NULL," \
+        "PASSWORD       TEXT    NOT NULL" \
+        ");";
+    
+    sql = "CREATE TABLE IF NOT EXISTS CHANNEL("  \
+        "ID             INTEGER     PRIMARY KEY     AUTOINCREMENT   NOT NULL," \
+        "NAME           TEXT    NOT NULL" \
+        ");";
+    
+    sql = "CREATE TABLE IF NOT EXISTS POST("  \
+        "ID             INTEGER     PRIMARY KEY     AUTOINCREMENT   NOT NULL," \
+        "USER_ID        INTEGER     NOT NULL," \
+        "CHANNEL_ID     INTEGER     NOT NULL," \
+        "CONTENT        TEXT        NOT NULL" \
+        "FOREIGN KEY(USER_ID) REFERENCES USER(ID)," \
+        "FOREIGN KEY(CHANNEL_ID) REFERENCES CHANNEL(ID)" \
+        ");";
+    
+    rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);
     
     if (rc != SQLITE_OK) {
-        
-        fprintf(stderr, "Failed to fetch data: %s\n", sqlite3_errmsg(db));
+        fprintf(stderr, "SQL error: %s\n", zErrMsg);
+        sqlite3_free(zErrMsg);
         sqlite3_close(db);
-        
         return 1;
     }    
     
-    rc = sqlite3_step(res);
-    
-    if (rc == SQLITE_ROW) {
-        printf("%s\n", sqlite3_column_text(res, 0));
-    }
-    
-    sqlite3_finalize(res);
     sqlite3_close(db);
     
     return 0;
