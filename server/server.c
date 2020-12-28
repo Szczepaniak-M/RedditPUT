@@ -1,5 +1,6 @@
 #include <sqlite3.h>
 #include <stdio.h>
+#include "structures.h"
 
 static int callback(void *NotUsed, int argc, char **argv, char **azColName) {
    int i;
@@ -10,51 +11,88 @@ static int callback(void *NotUsed, int argc, char **argv, char **azColName) {
    return 0;
 }
 
+int createTables();
+
 int main(void) {
     
-    sqlite3 *db;
-    char *zErrMsg = 0;
-    int rc;
-    char *sql;
+    ServerStatus status;
+    int error;
     
-    rc = sqlite3_open("server.db", &db);
-    
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));
-        sqlite3_close(db);
+    // Creating database
+    error = sqlite3_open("server.db", &status.db);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(status.db));
+        sqlite3_close(status.db);
         return 1;
     }
+
+    //Creating tables
+    error = createTables(&status);
+    if (error != SQLITE_OK) {
+        sqlite3_close(status.db);
+        return 1;
+    }
+  
     
-    sql = "CREATE TABLE IF NOT EXISTS USER("  \
+    sqlite3_close(status.db);
+    return 0;
+}
+
+int createTables(ServerStatus *status) {
+    int error;
+    char *sql_statement;
+    char *errMsg = 0;
+    
+    // Creating table USER
+    sql_statement = "CREATE TABLE IF NOT EXISTS USER("  \
         "ID             INTEGER     PRIMARY KEY     AUTOINCREMENT   NOT NULL," \
         "NAME           TEXT    NOT NULL," \
         "PASSWORD       TEXT    NOT NULL" \
         ");";
+   
+    error = sqlite3_exec(status->db, sql_statement, callback, 0, &errMsg);
+    if( error != SQLITE_OK ){
+        fprintf(stderr, "SQL error during creating table USER: %s\n", errMsg);
+        sqlite3_free(errMsg);
+        return error;
+    } else {
+        fprintf(stdout, "Table USER created successfully\n");
+    }
     
-    sql = "CREATE TABLE IF NOT EXISTS CHANNEL("  \
+    // Creating table CHANNEL
+    sql_statement = "CREATE TABLE IF NOT EXISTS CHANNEL("  \
         "ID             INTEGER     PRIMARY KEY     AUTOINCREMENT   NOT NULL," \
         "NAME           TEXT    NOT NULL" \
         ");";
+   
+    error = sqlite3_exec(status->db, sql_statement, callback, 0, &errMsg);
+    if (error != SQLITE_OK ){
+        fprintf(stderr, "SQL error during creating table CHANNEL: %s\n", errMsg);
+        sqlite3_free(errMsg);
+        return error;
+    } else {
+        fprintf(stdout, "Table CHANNEL created successfully\n");
+    }
     
-    sql = "CREATE TABLE IF NOT EXISTS POST("  \
+    // Creating table POST
+    sql_statement = "CREATE TABLE IF NOT EXISTS POST("  \
         "ID             INTEGER     PRIMARY KEY     AUTOINCREMENT   NOT NULL," \
         "USER_ID        INTEGER     NOT NULL," \
         "CHANNEL_ID     INTEGER     NOT NULL," \
-        "CONTENT        TEXT        NOT NULL" \
+        "CONTENT        TEXT        NOT NULL," \
         "FOREIGN KEY(USER_ID) REFERENCES USER(ID)," \
         "FOREIGN KEY(CHANNEL_ID) REFERENCES CHANNEL(ID)" \
         ");";
-    
-    rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);
-    
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "SQL error: %s\n", zErrMsg);
-        sqlite3_free(zErrMsg);
-        sqlite3_close(db);
-        return 1;
-    }    
-    
-    sqlite3_close(db);
+   
+    error = sqlite3_exec(status->db, sql_statement, callback, 0, &errMsg);
+    if (error != SQLITE_OK){
+        fprintf(stderr, "SQL error during creating table POST: %s\n", errMsg);
+        sqlite3_free(errMsg);
+        return error;
+    } else {
+        fprintf(stdout, "Table POST created successfully\n");
+    }
     
     return 0;
 }
+
