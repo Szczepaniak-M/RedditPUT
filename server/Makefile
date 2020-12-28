@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS= -Wall
+CFLAGS= -Wall -l sqlite3
 
 all: server
 
