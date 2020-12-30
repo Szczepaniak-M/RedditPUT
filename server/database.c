@@ -88,4 +88,40 @@ int createTables(ServerStatus *status) {
     return error;
 }
 
+int insertUser(ServerStatus *status, User *user) {
+
+    int error;
+    sqlite3_stmt *stmt;
+    const char *sqlStatement = "INSERT INTO USER(NAME, PASSWORD) VALUES (?, ?);";
+
+    error = sqlite3_prepare_v2(status->db, sqlStatement, -1, &stmt, NULL);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during preparing statement INSERT USER: %s\n",
+                status->programName, sqlite3_errmsg(status->db));
+        return error;
+    }
+
+    error = sqlite3_bind_text(stmt, 1, user->name, -1, SQLITE_TRANSIENT);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during binding parameter NAME with value %s in INSERT USER: %s\n",
+                status->programName, user->name, sqlite3_errmsg(status->db));
+        return error;
+    }
+
+    error = sqlite3_bind_text(stmt, 2, user->password, -1, SQLITE_TRANSIENT);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during binding parameter PASSWORD with value %s in INSERT USER: %s\n",
+                status->programName, user->password, sqlite3_errmsg(status->db));
+        return error;
+    }
+
+    error = sqlite3_step(stmt);
+    if (error != SQLITE_DONE) {
+        printf("ERROR inserting data: %s\n", sqlite3_errmsg(status->db));
+        return error;
+    }
+
+    return SQLITE_OK;
+}
+
 

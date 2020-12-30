@@ -12,4 +12,6 @@ int createDatabase(ServerStatus *status);
 
 int createTables(ServerStatus *status);
 
+int insertUser(ServerStatus *status, User *user);
+
 #endif

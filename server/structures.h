@@ -7,10 +7,10 @@
 #define QUEUE_SIZE 100
 #define ACTIVE_USER_LIMIT 100
 
-typedef struct User {
+typedef struct ActiveUser {
     int id;
     int descriptor;
-} User;
+} ActiveUser;
 
 typedef struct Thread {
     pthread_t id;
@@ -24,7 +24,7 @@ typedef struct ServerStatus {
     int serverPort;
     int serverSocketDescriptor;
     pthread_mutex_t mutex;
-    User activeUsers[ACTIVE_USER_LIMIT];
+    ActiveUser activeUsers[ACTIVE_USER_LIMIT];
     Thread pthreads[ACTIVE_USER_LIMIT];
     int isCleaning;
 } ServerStatus;
@@ -33,5 +33,13 @@ typedef struct ThreadData {
     ServerStatus *status;
     int descriptor;
 } ThreadData;
+
+typedef struct User {
+    int id;
+    char* name;
+    char* password;
+} User;
+
+
 
 #endif
