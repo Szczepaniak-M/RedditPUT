@@ -40,6 +40,11 @@ typedef struct User {
     char* password;
 } User;
 
+typedef struct Channel {
+    int id;
+    char* name;
+} Channel;
+
 
 
 #endif

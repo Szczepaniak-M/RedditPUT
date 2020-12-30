@@ -117,7 +117,38 @@ int insertUser(ServerStatus *status, User *user) {
 
     error = sqlite3_step(stmt);
     if (error != SQLITE_DONE) {
-        printf("ERROR inserting data: %s\n", sqlite3_errmsg(status->db));
+        fprintf(stderr, "%s: SQL error during inserting USER: %s\n",
+                status->programName, sqlite3_errmsg(status->db));
+        return error;
+    }
+
+    return SQLITE_OK;
+}
+
+int insertChannel(ServerStatus *status, Channel *channel) {
+
+    int error;
+    sqlite3_stmt *stmt;
+    const char *sqlStatement = "INSERT INTO CHANNEL(NAME) VALUES (?);";
+
+    error = sqlite3_prepare_v2(status->db, sqlStatement, -1, &stmt, NULL);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during preparing statement INSERT CHANNEL: %s\n",
+                status->programName, sqlite3_errmsg(status->db));
+        return error;
+    }
+
+    error = sqlite3_bind_text(stmt, 1, channel->name, -1, SQLITE_TRANSIENT);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during binding parameter NAME with value %s in INSERT CHANNEL: %s\n",
+                status->programName, channel->name, sqlite3_errmsg(status->db));
+        return error;
+    }
+
+    error = sqlite3_step(stmt);
+    if (error != SQLITE_DONE) {
+        fprintf(stderr, "%s: SQL error during inserting CHANNEL: %s\n",
+                status->programName, sqlite3_errmsg(status->db));
         return error;
     }
 

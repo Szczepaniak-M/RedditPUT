@@ -14,4 +14,6 @@ int createTables(ServerStatus *status);
 
 int insertUser(ServerStatus *status, User *user);
 
+int insertChannel(ServerStatus *status, Channel *channel);
+
 #endif
