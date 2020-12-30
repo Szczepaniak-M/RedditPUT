@@ -27,9 +27,6 @@ int createTableCheck(ServerStatus *status, char *sqlStatement, char *tableName) 
         fprintf(stderr, "SQL error during creating table %s: %s\n", tableName, errMsg);
         sqlite3_free(errMsg);
         sqlite3_close(status->db);
-
-    } else {
-        fprintf(stdout, "Table %s created successfully\n", tableName);
     }
     return error;
 }
