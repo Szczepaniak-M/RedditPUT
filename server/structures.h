@@ -12,6 +12,11 @@ typedef struct User {
     int descriptor;
 } User;
 
+typedef struct Thread {
+    pthread_t id;
+    int isInitialized;
+} Thread;
+
 
 typedef struct ServerStatus {
     sqlite3 *db;
@@ -20,7 +25,8 @@ typedef struct ServerStatus {
     int serverSocketDescriptor;
     pthread_mutex_t mutex;
     User activeUsers[ACTIVE_USER_LIMIT];
-    pthread_t pthreads[ACTIVE_USER_LIMIT];
+    Thread pthreads[ACTIVE_USER_LIMIT];
+    int isCleaning;
 } ServerStatus;
 
 typedef struct ThreadData {

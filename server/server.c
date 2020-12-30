@@ -65,13 +65,13 @@ void *connectionHandler(void *data) {
                 break;
             }
         }
-        pthread_mutex_unlock(&status->mutex);
 
         if (success) {
             handleConnection(status, connectionSocketDescriptor, i);
         } else {
             close(connectionSocketDescriptor);
         }
+        pthread_mutex_unlock(&status->mutex);
     }
 }
 
@@ -89,7 +89,8 @@ void handleConnection(ServerStatus *status, int descriptor, int index) {
         clean(status);
         exit(1);
     } else {
-        status->pthreads[index] = thread;
+        status->pthreads[index].id = thread;
+        status->pthreads[index].isInitialized = 1;
     }
 }
 
@@ -113,15 +114,21 @@ int waitForExit(ServerStatus *status) {
 
 void clean(ServerStatus *status){
     pthread_mutex_lock(&status->mutex);
+    status->isCleaning = 0;
     for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
         if (status->activeUsers[i].descriptor != -1) {
             shutdown(status->activeUsers[i].descriptor, SHUT_RDWR);
-            pthread_join(status->pthreads[i], NULL);
         }
     }
+    pthread_mutex_unlock(&status->mutex);
+    for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
+        if (status->pthreads[i].isInitialized == 1) {
+            pthread_join(status->pthreads[i].id, NULL);
+        }
+    }
+
     close(status->serverSocketDescriptor);
     sqlite3_close(status->db);
-    pthread_mutex_unlock(&status->mutex);
     pthread_mutex_destroy(&status->mutex);
 }
 
