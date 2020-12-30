@@ -16,4 +16,7 @@ int insertUser(ServerStatus *status, User *user);
 
 int insertChannel(ServerStatus *status, Channel *channel);
 
+int insertPost(ServerStatus *status, Post *post);
+
+
 #endif

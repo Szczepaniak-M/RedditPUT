@@ -155,4 +155,48 @@ int insertChannel(ServerStatus *status, Channel *channel) {
     return SQLITE_OK;
 }
 
+int insertPost(ServerStatus *status, Post *post) {
+
+    int error;
+    sqlite3_stmt *stmt;
+    const char *sqlStatement = "INSERT INTO POST(USER_ID, CHANNEL_ID, CONTENT) VALUES (?, ?, ?);";
+
+    error = sqlite3_prepare_v2(status->db, sqlStatement, -1, &stmt, NULL);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during preparing statement INSERT CHANNEL: %s\n",
+                status->programName, sqlite3_errmsg(status->db));
+        return error;
+    }
+
+    error = sqlite3_bind_int(stmt, 1, post->userId);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during binding parameter USER_ID with value %d in INSERT POST: %s\n",
+                status->programName, post->userId, sqlite3_errmsg(status->db));
+        return error;
+    }
+
+    error = sqlite3_bind_int(stmt, 2, post->channelId);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during binding parameter CHANNEL_ID with value %d in INSERT POST: %s\n",
+                status->programName, post->channelId, sqlite3_errmsg(status->db));
+        return error;
+    }
+
+    error = sqlite3_bind_text(stmt, 3, post->content, -1, SQLITE_TRANSIENT);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during binding parameter CONTENT with value %s in INSERT POST: %s\n",
+                status->programName, post->content, sqlite3_errmsg(status->db));
+        return error;
+    }
+
+    error = sqlite3_step(stmt);
+    if (error != SQLITE_DONE) {
+        fprintf(stderr, "%s: SQL error during inserting POST: %s\n",
+                status->programName, sqlite3_errmsg(status->db));
+        return error;
+    }
+
+    return SQLITE_OK;
+}
+
 
