@@ -13,13 +13,16 @@
 #include <pthread.h>
 
 #include "structures.h"
+#include "client-thread.h"
 
 
 int createSocket(ServerStatus *status);
 
-int createAcceptingConnectionThread(ServerStatus *status);
+int createConnectionHandlerThread(ServerStatus *status);
 
-void *createConnections(void *data);
+void *connectionHandler(void *data);
+
+void handleConnection(ServerStatus *status, int descriptor, int index);
 
 int waitForExit(ServerStatus *status);
 

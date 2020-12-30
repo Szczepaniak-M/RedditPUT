@@ -5,13 +5,23 @@ int main(int argc, char *argv[]) {
 
     if (argc != 2) {
         fprintf(stderr, "Sposób użycia: %s port_number\n", argv[0]);
-        exit(1);
+        return 1;
     }
 
+    int error;
+
+    // Initializing ServerStatus
     ServerStatus status;
     status.programName = argv[0];
     status.serverPort = atoi(argv[1]);
-    int error;
+    for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
+        status.activeUsers[i].descriptor = -1;
+    }
+    error = pthread_mutex_init(&status.mutex, NULL);
+    if ( error != 0) {
+        fprintf(stderr, "%s: Błąd podczas tworzenia mutex'u\n", argv[0]);
+        return 1;
+    }
 
     // Creating database
     error = createDatabase(&status);
@@ -32,8 +42,8 @@ int main(int argc, char *argv[]) {
         return error;
     }
 
-    // Creating thread which creates theds
-    error = createAcceptingConnectionThread(&status);
+    // Creating thread which handle new connections
+    error = createConnectionHandlerThread(&status);
     if (error != 0) {
         sqlite3_close(status.db);
         return error;

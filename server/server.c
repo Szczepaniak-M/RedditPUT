@@ -18,29 +18,32 @@ int createSocket(ServerStatus *status) {
     error = bind(status->serverSocketDescriptor, (struct sockaddr *) &serverAddress, sizeof(struct sockaddr));
     if (error < 0) {
         fprintf(stderr, "%s: Błąd przy próbie dowiązania adresu IP i numeru portu do gniazda.\n", status->programName);
+        close(status->serverSocketDescriptor);
         return 1;
     }
 
     error = listen(status->serverSocketDescriptor, QUEUE_SIZE);
     if (error < 0) {
         fprintf(stderr, "%s: Błąd przy próbie ustawienia wielkości kolejki.\n", status->programName);
+        close(status->serverSocketDescriptor);
         return 1;
     }
     return 0;
 }
 
-int createAcceptingConnectionThread(ServerStatus *status){
+int createConnectionHandlerThread(ServerStatus *status){
     int error;
     pthread_t thread;
 
-    error = pthread_create(&thread, NULL, createConnections, (void *) status);
+    error = pthread_create(&thread, NULL, connectionHandler, (void *) status);
     if (error) {
         printf("Błąd przy próbie utworzenia wątku, kod błędu: %d\n", error);
+        close(status->serverSocketDescriptor);
     }
     return error;
 }
 
-void *createConnections(void *data) {
+void *connectionHandler(void *data) {
     pthread_detach(pthread_self());
     int connectionSocketDescriptor;
     ServerStatus *status = (ServerStatus *) data;
@@ -54,16 +57,39 @@ void *createConnections(void *data) {
 
         pthread_mutex_lock(&status->mutex);
         int success = 0;
-        for (int i = 0; i < 3; i++) {
-
+        int i = 0;
+        for (i = 0; i < ACTIVE_USER_LIMIT; i++) {
+            if (status->activeUsers[i].descriptor == -1) {
+                status->activeUsers[i].descriptor = connectionSocketDescriptor;
+                success = 1;
+                break;
+            }
         }
         pthread_mutex_unlock(&status->mutex);
 
         if (success) {
-
+            handleConnection(status, connectionSocketDescriptor, i);
         } else {
             close(connectionSocketDescriptor);
         }
+    }
+}
+
+void handleConnection(ServerStatus *status, int descriptor, int index) {
+    int error = 0;
+    pthread_t thread;
+
+    ThreadData *data = (ThreadData *) malloc(sizeof(ThreadData));
+    data->status = status;
+    data->descriptor = descriptor;
+
+    error = pthread_create(&thread, NULL, clientThread, (void *) data);
+    if (error) {
+        printf("Błąd przy próbie utworzenia wątku, kod błędu: %d\n", error);
+        clean(status);
+        exit(1);
+    } else {
+        status->pthreads[index] = thread;
     }
 }
 
@@ -86,6 +112,16 @@ int waitForExit(ServerStatus *status) {
 }
 
 void clean(ServerStatus *status){
-
+    pthread_mutex_lock(&status->mutex);
+    for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
+        if (status->activeUsers[i].descriptor != -1) {
+            shutdown(status->activeUsers[i].descriptor, SHUT_RDWR);
+            pthread_join(status->pthreads[i], NULL);
+        }
+    }
+    close(status->serverSocketDescriptor);
+    sqlite3_close(status->db);
+    pthread_mutex_unlock(&status->mutex);
+    pthread_mutex_destroy(&status->mutex);
 }
 

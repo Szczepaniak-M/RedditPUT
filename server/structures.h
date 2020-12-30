@@ -5,6 +5,12 @@
 #include <pthread.h>
 
 #define QUEUE_SIZE 100
+#define ACTIVE_USER_LIMIT 100
+
+typedef struct User {
+    int id;
+    int descriptor;
+} User;
 
 
 typedef struct ServerStatus {
@@ -13,10 +19,13 @@ typedef struct ServerStatus {
     int serverPort;
     int serverSocketDescriptor;
     pthread_mutex_t mutex;
+    User activeUsers[ACTIVE_USER_LIMIT];
+    pthread_t pthreads[ACTIVE_USER_LIMIT];
 } ServerStatus;
 
 typedef struct ThreadData {
-    int connectionSocketDescriptor;
+    ServerStatus *status;
+    int descriptor;
 } ThreadData;
 
 #endif
