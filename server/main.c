@@ -19,19 +19,27 @@ int main(int argc, char *argv[]) {
         return error;
     }
 
-    //Creating tables
+    // Creating tables
     error = createTables(&status);
     if (error != SQLITE_OK) {
         return error;
     }
 
-    //Creating socket connection
-    error = createConnection(&status);
+    // Creating socket connection
+    error = createSocket(&status);
     if (error != 0) {
         sqlite3_close(status.db);
         return error;
     }
 
+    // Creating thread which creates theds
+    error = createAcceptingConnectionThread(&status);
+    if (error != 0) {
+        sqlite3_close(status.db);
+        return error;
+    }
+
+    // Waiting for close
     error = waitForExit(&status);
     if (error != 0) {
         sqlite3_close(status.db);

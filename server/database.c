@@ -2,7 +2,7 @@
 
 static int callback(void *NotUsed, int argc, char **argv, char **azColName) {
     int i;
-    for(i = 0; i<argc; i++) {
+    for (i = 0; i < argc; i++) {
         printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
     }
     printf("\n");
@@ -23,7 +23,8 @@ int createTableCheck(ServerStatus *status, char *sqlStatement, char *tableName) 
     char *errMsg = 0;
 
     error = sqlite3_exec(status->db, sqlStatement, NULL, 0, &errMsg);
-    if( error != SQLITE_OK ){
+
+    if (error != SQLITE_OK) {
         fprintf(stderr, "SQL error during creating table %s: %s\n", tableName, errMsg);
         sqlite3_free(errMsg);
         sqlite3_close(status->db);
@@ -35,7 +36,6 @@ int createTables(ServerStatus *status) {
 
     char *sqlStatement;
     int error;
-
     // Creating table USER
     sqlStatement = "CREATE TABLE IF NOT EXISTS USER("  \
         "ID             INTEGER     PRIMARY KEY     AUTOINCREMENT   NOT NULL," \

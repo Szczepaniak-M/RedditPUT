@@ -1,6 +1,6 @@
 #include "server.h"
 
-int createConnection(ServerStatus *status) {
+int createSocket(ServerStatus *status) {
     int error;
     struct sockaddr_in serverAddress;
 
@@ -29,20 +29,63 @@ int createConnection(ServerStatus *status) {
     return 0;
 }
 
-int waitForExit(ServerStatus *status) {
-    char textBuffer[10];
+int createAcceptingConnectionThread(ServerStatus *status){
     int error;
-    fprintf(stdout, "Aby bezpiecznie zamknąć serwer wpisz 'exit'\n");
-    while ((error = read(1, textBuffer, 10)) && error > 0) {
+    pthread_t thread;
+
+    error = pthread_create(&thread, NULL, createConnections, (void *) status);
+    if (error) {
+        printf("Błąd przy próbie utworzenia wątku, kod błędu: %d\n", error);
+    }
+    return error;
+}
+
+void *createConnections(void *data) {
+    pthread_detach(pthread_self());
+    int connectionSocketDescriptor;
+    ServerStatus *status = (ServerStatus *) data;
+    while (1) {
+        connectionSocketDescriptor = accept(status->serverSocketDescriptor, NULL, NULL);
+        if (connectionSocketDescriptor < 0) {
+            fprintf(stderr, "%s: Błąd przy próbie utworzenia gniazda dla połączenia.\n", status->programName);
+            clean(status);
+            exit(1);
+        }
+
+        pthread_mutex_lock(&status->mutex);
+        int success = 0;
+        for (int i = 0; i < 3; i++) {
+
+        }
+        pthread_mutex_unlock(&status->mutex);
+
+        if (success) {
+
+        } else {
+            close(connectionSocketDescriptor);
+        }
+    }
+}
+
+
+int waitForExit(ServerStatus *status) {
+    char textBuffer[5];
+    int error;
+    fprintf(stdout, "Aby bezpiecznie zamknąć serwer wpisz 'exit' i wciśnij Enter\n");
+    while ((error = read(1, textBuffer, 5)) && error > 0) {
         if (strcmp(textBuffer, "exit\n") == 0) {
+            clean(status);
             return 0;
         }
     }
     if (error == -1) {
-        perror("Błąd podczas wysyłania danych");
-        close(status->serverSocketDescriptor);
+        clean(status);
         return error;
     }
     return 0;
+}
+
+void clean(ServerStatus *status){
+
 }
 
