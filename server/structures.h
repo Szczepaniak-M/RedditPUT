@@ -49,7 +49,7 @@ typedef struct Post {
     int id;
     int userId;
     int channelId;
-    char content[500];
+    char* content;
 } Post;
 
 

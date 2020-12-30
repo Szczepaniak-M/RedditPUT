@@ -18,5 +18,7 @@ int insertChannel(ServerStatus *status, Channel *channel);
 
 int insertPost(ServerStatus *status, Post *post);
 
+int insertSubscription(ServerStatus *status, int userId, int channelId);
+
 
 #endif
