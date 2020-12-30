@@ -63,6 +63,20 @@ int createTables(ServerStatus *status) {
         return error;
     }
 
+    // Creating table USER_CHANNEL
+    sqlStatement = "CREATE TABLE IF NOT EXISTS USER_CHANNEL("  \
+        "USER_ID        INTEGER     NOT NULL," \
+        "CHANNEL_ID     INTEGER     NOT NULL," \
+        "PRIMARY KEY(USER_ID, CHANNEL_ID)," \
+        "FOREIGN KEY(USER_ID) REFERENCES USER(ID)," \
+        "FOREIGN KEY(CHANNEL_ID) REFERENCES CHANNEL(ID)" \
+        ");";
+
+    error = createTableCheck(status, sqlStatement, "USER_CHANNEL");
+    if (error != SQLITE_OK) {
+        return error;
+    }
+
     // Creating table POST
     sqlStatement = "CREATE TABLE IF NOT EXISTS POST("  \
         "ID             INTEGER     PRIMARY KEY     AUTOINCREMENT   NOT NULL," \
