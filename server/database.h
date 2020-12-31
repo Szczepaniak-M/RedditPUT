@@ -20,5 +20,7 @@ int insertPost(ServerStatus *status, Post *post);
 
 int insertSubscription(ServerStatus *status, int userId, int channelId);
 
+int deleteSubscription(ServerStatus *status, int userId, int channelId);
+
 
 #endif

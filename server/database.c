@@ -1,14 +1,5 @@
 #include "database.h"
 
-static int callback(void *NotUsed, int argc, char **argv, char **azColName) {
-    int i;
-    for (i = 0; i < argc; i++) {
-        printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-    }
-    printf("\n");
-    return 0;
-}
-
 int createDatabase(ServerStatus *status) {
     int error = sqlite3_open("server.db", &status->db);
     if (error != SQLITE_OK) {
@@ -235,5 +226,41 @@ int insertSubscription(ServerStatus *status, int userId, int channelId) {
 
     return SQLITE_OK;
 }
+
+int deleteSubscription(ServerStatus *status, int userId, int channelId) {
+    int error;
+    sqlite3_stmt *stmt;
+    const char *sqlStatement = "DELETE FROM USER_CHANNEL WHERE USER_ID = ? AND CHANNEL_ID = ?";
+
+    error = sqlite3_prepare_v2(status->db, sqlStatement, -1, &stmt, NULL);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during preparing statement DELETE USER_CHANNEL: %s\n",
+                status->programName, sqlite3_errmsg(status->db));
+        return error;
+    }
+
+    error = sqlite3_bind_int(stmt, 1, userId);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during binding parameter USER_ID with value %d in DELETE USER_CHANNEL: %s\n",
+                status->programName, userId, sqlite3_errmsg(status->db));
+        return error;
+    }
+
+    error = sqlite3_bind_int(stmt, 2, channelId);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during binding parameter CHANNEL_ID with value %d in DELETE USER_CHANNEL: %s\n",
+                status->programName, channelId, sqlite3_errmsg(status->db));
+        return error;
+    }
+
+    error = sqlite3_step(stmt);
+    if (error != SQLITE_DONE) {
+        fprintf(stderr, "%s: SQL error during deleting USER_CHANNEL: %s\n",
+                status->programName, sqlite3_errmsg(status->db));
+        return error;
+    }
+    return SQLITE_OK;
+}
+
 
 
