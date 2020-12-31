@@ -76,7 +76,7 @@ void *connectionHandler(void *data) {
 }
 
 void handleConnection(ServerStatus *status, int descriptor, int index) {
-    int error = 0;
+    int error;
     pthread_t thread;
 
     ThreadData *data = (ThreadData *) malloc(sizeof(ThreadData));

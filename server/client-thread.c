@@ -14,27 +14,27 @@ void *clientThread(void *inputData) {
 
         switch (requestType) {
             case 1: // rejestracja
-                error = signUp(status, size, textBuffer);
+                error = signUp(status, descriptor, size, textBuffer);
                 requestType = -1;
                 break;
             case 2: // logowanie
-                error = login(status, size, textBuffer);
+                error = login(status, descriptor, size, textBuffer);
                 requestType = -1;
                 break;
             case 3: // dodaj postll
-                error = addPost(status, size, textBuffer);
+                error = addPost(status, descriptor, size, textBuffer);
                 requestType = -1;
                 break;
             case 4: // dodaj kanał
-                error = addChannel(status, size, textBuffer);
+                error = addChannel(status, descriptor, size, textBuffer);
                 requestType = -1;
                 break;
             case 5: // zasubskrybuj kanał
-                error = subscribeChannel(status, size, textBuffer);
+                error = subscribeChannel(status, descriptor, size, textBuffer);
                 requestType = -1;
                 break;
             case 6: // usuń subksrypcję
-                error = unsubscribeChannel(status, size, textBuffer);
+                error = unsubscribeChannel(status, descriptor, size, textBuffer);
                 requestType = -1;
                 break;
             default:
@@ -59,26 +59,58 @@ void *clientThread(void *inputData) {
     pthread_exit(NULL);
 }
 
-int signUp(ServerStatus *status, int size, char *buffer) {
+int signUp(ServerStatus *status, int descriptor, int size, char *buffer) {
+    int error;
+    User user;
+    error = insertUser(status, &user);
+    for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
+        if (status->activeUsers[i].descriptor == descriptor) {
+            status->activeUsers[i].id = user.id;
+
+        }
+    }
+    return error;
+}
+
+int login(ServerStatus *status, int descriptor, int size, char *buffer) {
+    User user;
+    int error;
+    for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
+        if (status->activeUsers[i].descriptor == descriptor) {
+            status->activeUsers[i].id = user.id;
+
+        }
+    }
+    return error;
+}
+
+int addPost(ServerStatus *status, int descriptor, int size, char *buffer) {
+    Post post;
+    int error;
+    error = insertPost(status, &post);
+    return error;
+}
+
+int addChannel(ServerStatus *status, int descriptor, int size, char *buffer) {
+    Channel channel;
+    int error;
+    error = insertChannel(status, &channel);
+    return error;
+}
+
+int subscribeChannel(ServerStatus *status, int descriptor, int size, char *buffer) {
+    int userId;
+    int channelId;
+    int error;
+    error = insertSubscription(status, userId, channelId);
+    return error;
 
 }
 
-int login(ServerStatus *status, int size, char *buffer) {
-
-}
-
-int addPost(ServerStatus *status, int size, char *buffer) {
-
-}
-
-int addChannel(ServerStatus *status, int size, char *buffer) {
-
-}
-
-int subscribeChannel(ServerStatus *status, int size, char *buffer) {
-
-}
-
-int unsubscribeChannel(ServerStatus *status, int size, char *buffer) {
-
+int unsubscribeChannel(ServerStatus *status, int descriptor, int size, char *buffer) {
+    int userId;
+    int channelId;
+    int error;
+    error = deleteSubscription(status, userId, channelId);
+    return error;
 }
