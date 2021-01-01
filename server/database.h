@@ -4,6 +4,8 @@
 
 #include <sqlite3.h>
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
 #include "structures.h"
 
@@ -21,6 +23,8 @@ int insertPost(ServerStatus *status, Post *post);
 int insertSubscription(ServerStatus *status, int userId, int channelId);
 
 int deleteSubscription(ServerStatus *status, int userId, int channelId);
+
+int selectUserByName(ServerStatus *status, User *user);
 
 
 #endif
