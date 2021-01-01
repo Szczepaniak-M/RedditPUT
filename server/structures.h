@@ -23,7 +23,8 @@ typedef struct ServerStatus {
     char *programName;
     int serverPort;
     int serverSocketDescriptor;
-    pthread_mutex_t mutex;
+    pthread_mutex_t activeUsersMutex;
+    pthread_mutex_t cryptMutex;
     ActiveUser activeUsers[ACTIVE_USER_LIMIT];
     Thread pthreads[ACTIVE_USER_LIMIT];
     int isCleaning;

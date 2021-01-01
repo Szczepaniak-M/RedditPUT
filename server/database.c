@@ -306,12 +306,14 @@ int selectUserByName(ServerStatus *status, User *user) {
     error = sqlite3_step(stmt);
     if (error == SQLITE_ROW) {
         user->id = sqlite3_column_int(stmt, 0);
-        char *text =  (char *) sqlite3_column_text(stmt, 1);
-        user->name = (char *) malloc(sizeof(char) * (strlen(text)+1));
+        char *text = (char *) sqlite3_column_text(stmt, 1);
+        user->name = (char *) malloc(sizeof(char) * (strlen(text) + 1));
         strcpy(user->name, text);
-        text =  (char *) sqlite3_column_text(stmt, 2);
-        user->password = (char *) malloc(sizeof(char) * (strlen(text)+1));
+        text = (char *) sqlite3_column_text(stmt, 2);
+        user->password = (char *) malloc(sizeof(char) * (strlen(text) + 1));
         strcpy(user->password, text);
+    } else if (error == SQLITE_DONE) {
+        user->name = NULL;
     } else {
         fprintf(stderr, "%s: SQL error during selecting  USER: %s\n",
                 status->programName, sqlite3_errmsg(status->db));

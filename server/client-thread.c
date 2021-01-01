@@ -56,7 +56,7 @@ void *clientThread(void *inputData) {
         }
     }
 
-    pthread_mutex_lock(&status->mutex);
+    pthread_mutex_lock(&status->activeUsersMutex);
     for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
         if (status->activeUsers[i].descriptor == descriptor) {
             status->activeUsers[i].descriptor = -1;
@@ -65,7 +65,7 @@ void *clientThread(void *inputData) {
             }
         }
     }
-    pthread_mutex_unlock(&status->mutex);
+    pthread_mutex_unlock(&status->activeUsersMutex);
     free(inputData);
     close(descriptor);
     pthread_exit(NULL);
@@ -84,14 +84,36 @@ int signUp(ServerStatus *status, int descriptor, int size) {
     char *savePointer;
     user.name = strtok_r(content, ";", &savePointer);
     user.password = strtok_r(NULL, ";", &savePointer);
-    user.password = crypt(user.password, "AA");
 
+    // checking if name is duplicated
+    error = selectUserByName(status, &user);
+    if (user.name != NULL) {
+        sendResponse('0', 1,descriptor);
+        free(content);
+        return error;
+    }
+
+
+    // encrypt password
+    pthread_mutex_lock(&status->cryptMutex);
+    char* password = crypt(user.password, "PP");
+    user.password = (char *) malloc(sizeof(char) * (strlen(password) + 1));
+    strcpy(user.password, password);
+    pthread_mutex_unlock(&status->cryptMutex);
+
+    // insert user
     error = insertUser(status, &user);
+    free(user.password);
     free(content);
+
+    // get user id
+    error = selectUserByName(status, &user);
+    free(user.password);
+    free(user.name);
+
     for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
         if (status->activeUsers[i].descriptor == descriptor) {
             status->activeUsers[i].id = user.id;
-
         }
     }
 
@@ -115,13 +137,19 @@ int login(ServerStatus *status, int descriptor, int size) {
 
     char *savePointer;
     user.name = strtok_r(content, ";", &savePointer);
-    user.password = strtok_r(NULL, ";", &savePointer);
-    user.password = crypt(user.password, "AA");
+    char* password = strtok_r(NULL, ";", &savePointer);
+    error = selectUserByName(status, &user);
 
+    pthread_mutex_lock(&status->cryptMutex);
+    char* cryptPassword = crypt(password, "PP");
+    strcpy(user.password, cryptPassword);
+    pthread_mutex_unlock(&status->cryptMutex);
 
-    //todo select user by password and name
-
+    free(user.name);
+    free(user.password);
+    free(cryptPassword);
     free(content);
+
     for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
         if (status->activeUsers[i].descriptor == descriptor) {
             status->activeUsers[i].id = user.id;
@@ -133,6 +161,9 @@ int login(ServerStatus *status, int descriptor, int size) {
     } else {
         sendResponse('1', 1,descriptor);
     }
+
+    // todo wysłanie zaleglych powiadomien
+
     return error;
 }
 
@@ -225,6 +256,8 @@ int unsubscribeChannel(ServerStatus *status, int descriptor, int size) {
     userId = atoi(strtok_r(content, ";", &savePointer));
     channelId = atoi(strtok_r(NULL, ";", &savePointer));
     error = deleteSubscription(status, userId, channelId);
+    free(content);
+
     if (error == 0) {
         sendResponse('5', 0,descriptor);
     } else {
