@@ -23,7 +23,7 @@ int subscribeChannel(ServerStatus *status, int descriptor, int size);
 
 int unsubscribeChannel(ServerStatus *status, int descriptor, int size);
 
-int sendNotice(int noticeId, int channelId, int descriptor);
+int sendNotice(int channelId, int descriptor);
 
 char* readContent(int descriptor, int size, int *error);
 

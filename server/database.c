@@ -71,6 +71,7 @@ int createTables(ServerStatus *status) {
         "USER_ID        INTEGER     NOT NULL," \
         "CHANNEL_ID     INTEGER     NOT NULL," \
         "CONTENT        TEXT        NOT NULL," \
+        "ADD_TIME       DATETIME    NOT NULL," \
         "FOREIGN KEY(USER_ID) REFERENCES USER(ID)," \
         "FOREIGN KEY(CHANNEL_ID) REFERENCES CHANNEL(ID)" \
         ");";
@@ -173,7 +174,7 @@ int insertPost(ServerStatus *status, Post *post) {
 
     int error;
     sqlite3_stmt *stmt;
-    const char *sqlStatement = "INSERT INTO POST(USER_ID, CHANNEL_ID, CONTENT) VALUES (?, ?, ?);";
+    const char *sqlStatement = "INSERT INTO POST(USER_ID, CHANNEL_ID, CONTENT, ADD_TIME) VALUES (?, ?, ?, CURRENT_TIMESTAMP);";
 
     error = sqlite3_prepare_v2(status->db, sqlStatement, -1, &stmt, NULL);
     if (error != SQLITE_OK) {
@@ -428,9 +429,45 @@ int selectUserByName(ServerStatus *status, User *user) {
     return SQLITE_OK;
 }
 
-int selectNoticeByUserId(ServerStatus *status, int userId, sqlite3_stmt *stmt) {
+int selectNewPostIdByUserId(ServerStatus *status, int userId, int *postId) {
     int error;
-    const char *sqlStatement = "SELECT ID, CHANNEL_ID FROM NOTICE WHERE USER_ID = ?;";
+    sqlite3_stmt *stmt;
+    const char *sqlStatement = "SELECT ID FROM POST WHERE USER_ID = ? ORDER BY ADD_TIME DESC;";
+
+    error = sqlite3_prepare_v2(status->db, sqlStatement, -1, &stmt, NULL);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during preparing statement SELECT USER: %s\n",
+                status->programName, sqlite3_errmsg(status->db));
+        sqlite3_finalize(stmt);
+        return error;
+    }
+
+    error = sqlite3_bind_int(stmt, 1, userId);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during binding parameter USER_ID with value %d in SELECT POST: %s\n",
+                status->programName, userId, sqlite3_errmsg(status->db));
+        sqlite3_finalize(stmt);
+        return error;
+    }
+
+    error = sqlite3_step(stmt);
+    if (error == SQLITE_ROW) {
+        *postId = sqlite3_column_int(stmt, 0);
+    } else if (error == SQLITE_DONE) {
+        postId = NULL;
+    } else {
+        fprintf(stderr, "%s: SQL error during selecting POST: %s\n",
+                status->programName, sqlite3_errmsg(status->db));
+        sqlite3_finalize(stmt);
+        return error;
+    }
+    sqlite3_finalize(stmt);
+    return SQLITE_OK;
+}
+
+int createStatementSelectNoticesByUserId(ServerStatus *status, int userId, sqlite3_stmt *stmt) {
+    int error;
+    const char *sqlStatement = "SELECT CHANNEL_ID FROM NOTICE WHERE USER_ID = ?;";
 
     error = sqlite3_prepare_v2(status->db, sqlStatement, -1, &stmt, NULL);
     if (error != SQLITE_OK) {
@@ -448,6 +485,28 @@ int selectNoticeByUserId(ServerStatus *status, int userId, sqlite3_stmt *stmt) {
         return error;
     }
 
+    return SQLITE_OK;
+}
+
+int createStatementSelectUsersByChannelId(ServerStatus *status, int channelId, sqlite3_stmt *stmt) {
+    int error;
+    const char *sqlStatement = "SELECT USER_ID FROM USER_CHANNEL WHERE CHANNEL_ID = ?;";
+
+    error = sqlite3_prepare_v2(status->db, sqlStatement, -1, &stmt, NULL);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during preparing statement SELECT USER_CHANNEL: %s\n",
+                status->programName, sqlite3_errmsg(status->db));
+        sqlite3_finalize(stmt);
+        return error;
+    }
+
+    error = sqlite3_bind_int(stmt, 1, channelId);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during binding parameter USER_ID with value %d in SELECT USER_CHANNEL: %s\n",
+                status->programName, channelId, sqlite3_errmsg(status->db));
+        sqlite3_finalize(stmt);
+        return error;
+    }
 
     return SQLITE_OK;
 }

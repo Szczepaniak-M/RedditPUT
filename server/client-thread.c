@@ -164,13 +164,11 @@ int login(ServerStatus *status, int descriptor, int size) {
 
     sqlite3_stmt *stmt = NULL;
     int channelId;
-    int postId;
-    error = selectNoticeByUserId(status, user.id, stmt);
+    error = createStatementSelectNoticesByUserId(status, user.id, stmt);
     error = sqlite3_step(stmt);
     while (error == SQLITE_ROW) {
-        postId = sqlite3_column_int(stmt, 0);
-        channelId = sqlite3_column_int(stmt, 1);
-        sendNotice(postId, channelId, descriptor);
+        channelId = sqlite3_column_int(stmt, 0);
+        sendNotice(channelId, descriptor);
     }
     if (error != SQLITE_DONE) {
         fprintf(stderr, "%s: SQL error during selecting  USER: %s\n",
@@ -205,7 +203,33 @@ int addPost(ServerStatus *status, int descriptor, int size) {
         sendResponse('2', 1, descriptor);
     }
 
-    // todo rozesłać powiadomienia
+    sqlite3_stmt *stmt = NULL;
+    int userId;
+    error = selectNewPostIdByUserId(status, post.userId, &post.id);
+    error = createStatementSelectUsersByChannelId(status, post.channelId, stmt);
+    error = sqlite3_step(stmt);
+    while (error == SQLITE_ROW) {
+        userId = sqlite3_column_int(stmt, 0);
+        error = insertNotice(status, userId, post.channelId, post.id);
+        pthread_mutex_lock(&status->activeUsersMutex);
+        for(int i = 0; i < ACTIVE_USER_LIMIT; i++){
+            if (status->activeUsers[i].id == userId){
+                if (descriptor == status->activeUsers[i].descriptor) {
+                    break;
+                } else {
+                    sendNotice(post.channelId, status->activeUsers[i].descriptor);
+                }
+            }
+        }
+        pthread_mutex_unlock(&status->activeUsersMutex);
+    }
+    if (error != SQLITE_DONE) {
+        fprintf(stderr, "%s: SQL error during selecting  USER: %s\n",
+                status->programName, sqlite3_errmsg(status->db));
+        sqlite3_finalize(stmt);
+        return error;
+    }
+    sqlite3_finalize(stmt);
     return error;
 }
 
@@ -282,21 +306,16 @@ int unsubscribeChannel(ServerStatus *status, int descriptor, int size) {
     return error;
 }
 
-int sendNotice(int noticeId, int channelId, int descriptor) {
+int sendNotice(int channelId, int descriptor) {
     int error;
-    int noticeCopy = noticeId;
     int channelCopy = channelId;
     int counter = 0;
-    while (noticeCopy > 0) {
-        noticeCopy /= 10;
-        counter++;
-    }
     while (channelCopy > 0) {
         channelCopy /= 10;
         counter++;
     }
-    char *response = (char *) malloc(sizeof(char) * (counter + 6));
-    sprintf(response, "1;6;%d;%d", noticeId, channelId);
+    char *response = (char *) malloc(sizeof(char) * (counter + 5));
+    sprintf(response, "1;6;%d", channelId);
     error = write(descriptor, response, strlen(response) * sizeof(char));
     free(response);
     return error;
