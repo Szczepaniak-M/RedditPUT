@@ -4,22 +4,25 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <string.h>
 
 #include "structures.h"
 #include "database.h"
 
 void *clientThread(void *data);
 
-int signUp(ServerStatus *status, int descriptor, int size, char *buffer);
+int signUp(ServerStatus *status, int descriptor, int size);
 
-int login(ServerStatus *status, int descriptor, int size, char *buffer);
+int login(ServerStatus *status, int descriptor, int size);
 
-int addPost(ServerStatus *status, int descriptor, int size, char *buffer);
+int addPost(ServerStatus *status, int descriptor, int size);
 
-int addChannel(ServerStatus *status, int descriptor, int size, char *buffer);
+int addChannel(ServerStatus *status, int descriptor, int size);
 
-int subscribeChannel(ServerStatus *status, int descriptor, int size, char *buffer);
+int subscribeChannel(ServerStatus *status, int descriptor, int size);
 
-int unsubscribeChannel(ServerStatus *status, int descriptor, int size, char *buffer);
+int unsubscribeChannel(ServerStatus *status, int descriptor, int size);
+
+void clear(char *requestType, int *charCounter, int *delimiterCounter, char *sizeBuffer);
 
 #endif //SERVER_CLIENT_THREAD_H
