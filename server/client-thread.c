@@ -81,8 +81,12 @@ int signUp(ServerStatus *status, int descriptor, int size) {
         return error;
     }
 
+    char *savePointer;
+    user.name = strtok_r(content, ";", &savePointer);
+    user.password = strtok_r(NULL, ";", &savePointer);
+    user.password = crypt(user.password, "AA");
     free(content);
-    char *result = crypt("Haslo", "AA");
+
     error = insertUser(status, &user);
     for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
         if (status->activeUsers[i].descriptor == descriptor) {
@@ -103,6 +107,14 @@ int login(ServerStatus *status, int descriptor, int size) {
         return error;
     }
 
+    char *savePointer;
+    user.name = strtok_r(content, ";", &savePointer);
+    user.password = strtok_r(NULL, ";", &savePointer);
+    user.password = crypt(user.password, "AA");
+    free(content);
+
+    //todo select user by password and name
+
     for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
         if (status->activeUsers[i].descriptor == descriptor) {
             status->activeUsers[i].id = user.id;
@@ -122,6 +134,12 @@ int addPost(ServerStatus *status, int descriptor, int size) {
         return error;
     }
 
+    char *savePointer;
+    post.userId = atoi(strtok_r(content, ";", &savePointer));
+    post.channelId = atoi(strtok_r(NULL, ";", &savePointer));
+    post.content = strtok_r(NULL, "", &savePointer); // todo upewnic sie ze działa
+    free(content);
+
     error = insertPost(status, &post);
     return error;
 }
@@ -136,7 +154,9 @@ int addChannel(ServerStatus *status, int descriptor, int size) {
         return error;
     }
 
+    channel.name = content;
     error = insertChannel(status, &channel);
+    free(content);
     return error;
 }
 
@@ -150,6 +170,11 @@ int subscribeChannel(ServerStatus *status, int descriptor, int size) {
         free(content);
         return error;
     }
+
+    char *savePointer;
+    userId = atoi(strtok_r(content, ";", &savePointer));
+    channelId = atoi(strtok_r(NULL, ";", &savePointer));
+    error = deleteSubscription(status, userId, channelId);
 
     error = insertSubscription(status, userId, channelId);
     return error;
@@ -167,6 +192,9 @@ int unsubscribeChannel(ServerStatus *status, int descriptor, int size) {
         return error;
     }
 
+    char *savePointer;
+    userId = atoi(strtok_r(content, ";", &savePointer));
+    channelId = atoi(strtok_r(NULL, ";", &savePointer));
     error = deleteSubscription(status, userId, channelId);
     return error;
 }
