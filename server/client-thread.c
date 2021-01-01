@@ -85,9 +85,9 @@ int signUp(ServerStatus *status, int descriptor, int size) {
     user.name = strtok_r(content, ";", &savePointer);
     user.password = strtok_r(NULL, ";", &savePointer);
     user.password = crypt(user.password, "AA");
-    free(content);
 
     error = insertUser(status, &user);
+    free(content);
     for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
         if (status->activeUsers[i].descriptor == descriptor) {
             status->activeUsers[i].id = user.id;
@@ -117,10 +117,11 @@ int login(ServerStatus *status, int descriptor, int size) {
     user.name = strtok_r(content, ";", &savePointer);
     user.password = strtok_r(NULL, ";", &savePointer);
     user.password = crypt(user.password, "AA");
-    free(content);
+
 
     //todo select user by password and name
 
+    free(content);
     for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
         if (status->activeUsers[i].descriptor == descriptor) {
             status->activeUsers[i].id = user.id;
@@ -148,15 +149,17 @@ int addPost(ServerStatus *status, int descriptor, int size) {
     char *savePointer;
     post.userId = atoi(strtok_r(content, ";", &savePointer));
     post.channelId = atoi(strtok_r(NULL, ";", &savePointer));
-    post.content = strtok_r(NULL, "", &savePointer); // todo upewnic sie ze działa
-    free(content);
+    post.content = strtok_r(NULL, ";", &savePointer);
 
     error = insertPost(status, &post);
+    free(content);
     if (error == 0) {
         sendResponse('2', 0,descriptor);
     } else {
         sendResponse('2', 1,descriptor);
     }
+
+    // todo rozesłać powiadomienia
     return error;
 }
 
@@ -195,9 +198,9 @@ int subscribeChannel(ServerStatus *status, int descriptor, int size) {
     char *savePointer;
     userId = atoi(strtok_r(content, ";", &savePointer));
     channelId = atoi(strtok_r(NULL, ";", &savePointer));
-    error = deleteSubscription(status, userId, channelId);
-
     error = insertSubscription(status, userId, channelId);
+    free(content);
+
     if (error == 0) {
         sendResponse('4', 0,descriptor);
     } else {
