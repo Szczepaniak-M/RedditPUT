@@ -428,5 +428,28 @@ int selectUserByName(ServerStatus *status, User *user) {
     return SQLITE_OK;
 }
 
+int selectNoticeByUserId(ServerStatus *status, int userId, sqlite3_stmt *stmt) {
+    int error;
+    const char *sqlStatement = "SELECT ID, CHANNEL_ID FROM NOTICE WHERE USER_ID = ?;";
+
+    error = sqlite3_prepare_v2(status->db, sqlStatement, -1, &stmt, NULL);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during preparing statement SELECT NOTICE: %s\n",
+                status->programName, sqlite3_errmsg(status->db));
+        sqlite3_finalize(stmt);
+        return error;
+    }
+
+    error = sqlite3_bind_int(stmt, 1, userId);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during binding parameter USER_ID with value %d in SELECT NOTICE: %s\n",
+                status->programName, userId, sqlite3_errmsg(status->db));
+        sqlite3_finalize(stmt);
+        return error;
+    }
+
+
+    return SQLITE_OK;
+}
 
 

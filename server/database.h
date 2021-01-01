@@ -30,5 +30,7 @@ int deleteNotice(ServerStatus *status, int userId, int channelId);
 
 int selectUserByName(ServerStatus *status, User *user);
 
+int selectNoticeByUserId(ServerStatus *status, int userId, sqlite3_stmt *stmt);
+
 
 #endif

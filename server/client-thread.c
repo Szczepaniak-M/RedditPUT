@@ -162,8 +162,23 @@ int login(ServerStatus *status, int descriptor, int size) {
         sendResponse('1', 1, descriptor);
     }
 
-    // todo wysłanie zaleglych powiadomien
-
+    sqlite3_stmt *stmt = NULL;
+    int channelId;
+    int postId;
+    error = selectNoticeByUserId(status, user.id, stmt);
+    error = sqlite3_step(stmt);
+    while (error == SQLITE_ROW) {
+        postId = sqlite3_column_int(stmt, 0);
+        channelId = sqlite3_column_int(stmt, 1);
+        sendNotice(postId, channelId, descriptor);
+    }
+    if (error != SQLITE_DONE) {
+        fprintf(stderr, "%s: SQL error during selecting  USER: %s\n",
+                status->programName, sqlite3_errmsg(status->db));
+        sqlite3_finalize(stmt);
+        return error;
+    }
+    sqlite3_finalize(stmt);
     return error;
 }
 
