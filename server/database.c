@@ -297,7 +297,7 @@ int selectUserByName(ServerStatus *status, User *user) {
 
     error = sqlite3_bind_text(stmt, 1, user->name, -1, SQLITE_TRANSIENT);
     if (error != SQLITE_OK) {
-        fprintf(stderr, "%s: SQL error during binding parameter USER_ID with value %s in DELETE USER_CHANNEL: %s\n",
+        fprintf(stderr, "%s: SQL error during binding parameter USER_ID with value %s in SELECT USER: %s\n",
                 status->programName, user->name, sqlite3_errmsg(status->db));
         sqlite3_finalize(stmt);
         return error;
@@ -313,7 +313,7 @@ int selectUserByName(ServerStatus *status, User *user) {
         user->password = (char *) malloc(sizeof(char) * (strlen(text)+1));
         strcpy(user->password, text);
     } else {
-        fprintf(stderr, "%s: SQL error during deleting USER_CHANNEL: %s\n",
+        fprintf(stderr, "%s: SQL error during selecting  USER: %s\n",
                 status->programName, sqlite3_errmsg(status->db));
         sqlite3_finalize(stmt);
         return error;
