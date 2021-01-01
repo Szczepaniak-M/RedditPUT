@@ -22,7 +22,11 @@ int insertPost(ServerStatus *status, Post *post);
 
 int insertSubscription(ServerStatus *status, int userId, int channelId);
 
+int insertNotice(ServerStatus *status, int userId, int channelId, int postId);
+
 int deleteSubscription(ServerStatus *status, int userId, int channelId);
+
+int deleteNotice(ServerStatus *status, int userId, int channelId);
 
 int selectUserByName(ServerStatus *status, User *user);
 

@@ -75,7 +75,7 @@ int signUp(ServerStatus *status, int descriptor, int size) {
     int error;
     User user;
 
-    char* content = readContent(descriptor, size, &error);
+    char *content = readContent(descriptor, size, &error);
     if (error == -1) {
         free(content);
         return error;
@@ -88,15 +88,14 @@ int signUp(ServerStatus *status, int descriptor, int size) {
     // checking if name is duplicated
     error = selectUserByName(status, &user);
     if (user.name != NULL) {
-        sendResponse('0', 1,descriptor);
+        sendResponse('0', 1, descriptor);
         free(content);
         return error;
     }
 
-
     // encrypt password
     pthread_mutex_lock(&status->cryptMutex);
-    char* password = crypt(user.password, "PP");
+    char *password = crypt(user.password, "PP");
     user.password = (char *) malloc(sizeof(char) * (strlen(password) + 1));
     strcpy(user.password, password);
     pthread_mutex_unlock(&status->cryptMutex);
@@ -118,9 +117,9 @@ int signUp(ServerStatus *status, int descriptor, int size) {
     }
 
     if (error == 0) {
-        sendResponse('0', 0,descriptor);
+        sendResponse('0', 0, descriptor);
     } else {
-        sendResponse('0', 1,descriptor);
+        sendResponse('0', 1, descriptor);
     }
     return error;
 }
@@ -129,7 +128,7 @@ int login(ServerStatus *status, int descriptor, int size) {
     User user;
     int error;
 
-    char* content = readContent(descriptor, size, &error);
+    char *content = readContent(descriptor, size, &error);
     if (error == -1) {
         free(content);
         return error;
@@ -137,11 +136,12 @@ int login(ServerStatus *status, int descriptor, int size) {
 
     char *savePointer;
     user.name = strtok_r(content, ";", &savePointer);
-    char* password = strtok_r(NULL, ";", &savePointer);
+    char *password = strtok_r(NULL, ";", &savePointer);
     error = selectUserByName(status, &user);
 
+    // encrypt password
     pthread_mutex_lock(&status->cryptMutex);
-    char* cryptPassword = crypt(password, "PP");
+    char *cryptPassword = crypt(password, "PP");
     strcpy(user.password, cryptPassword);
     pthread_mutex_unlock(&status->cryptMutex);
 
@@ -157,9 +157,9 @@ int login(ServerStatus *status, int descriptor, int size) {
         }
     }
     if (error == 0) {
-        sendResponse('1', 0,descriptor);
+        sendResponse('1', 0, descriptor);
     } else {
-        sendResponse('1', 1,descriptor);
+        sendResponse('1', 1, descriptor);
     }
 
     // todo wysłanie zaleglych powiadomien
@@ -171,7 +171,7 @@ int addPost(ServerStatus *status, int descriptor, int size) {
     Post post;
     int error;
 
-    char* content = readContent(descriptor, size, &error);
+    char *content = readContent(descriptor, size, &error);
     if (error == -1) {
         free(content);
         return error;
@@ -185,9 +185,9 @@ int addPost(ServerStatus *status, int descriptor, int size) {
     error = insertPost(status, &post);
     free(content);
     if (error == 0) {
-        sendResponse('2', 0,descriptor);
+        sendResponse('2', 0, descriptor);
     } else {
-        sendResponse('2', 1,descriptor);
+        sendResponse('2', 1, descriptor);
     }
 
     // todo rozesłać powiadomienia
@@ -198,7 +198,7 @@ int addChannel(ServerStatus *status, int descriptor, int size) {
     Channel channel;
     int error;
 
-    char* content = readContent(descriptor, size, &error);
+    char *content = readContent(descriptor, size, &error);
     if (error == -1) {
         free(content);
         return error;
@@ -208,9 +208,9 @@ int addChannel(ServerStatus *status, int descriptor, int size) {
     error = insertChannel(status, &channel);
     free(content);
     if (error == 0) {
-        sendResponse('3', 0,descriptor);
+        sendResponse('3', 0, descriptor);
     } else {
-        sendResponse('3', 1,descriptor);
+        sendResponse('3', 1, descriptor);
     }
     return error;
 }
@@ -220,7 +220,7 @@ int subscribeChannel(ServerStatus *status, int descriptor, int size) {
     int channelId;
     int error;
 
-    char* content = readContent(descriptor, size, &error);
+    char *content = readContent(descriptor, size, &error);
     if (error == -1) {
         free(content);
         return error;
@@ -233,9 +233,9 @@ int subscribeChannel(ServerStatus *status, int descriptor, int size) {
     free(content);
 
     if (error == 0) {
-        sendResponse('4', 0,descriptor);
+        sendResponse('4', 0, descriptor);
     } else {
-        sendResponse('4', 1,descriptor);
+        sendResponse('4', 1, descriptor);
     }
     return error;
 
@@ -246,7 +246,7 @@ int unsubscribeChannel(ServerStatus *status, int descriptor, int size) {
     int channelId;
     int error;
 
-    char* content = readContent(descriptor, size, &error);
+    char *content = readContent(descriptor, size, &error);
     if (error == -1) {
         free(content);
         return error;
@@ -259,15 +259,35 @@ int unsubscribeChannel(ServerStatus *status, int descriptor, int size) {
     free(content);
 
     if (error == 0) {
-        sendResponse('5', 0,descriptor);
+        sendResponse('5', 0, descriptor);
     } else {
-        sendResponse('5', 1,descriptor);
+        sendResponse('5', 1, descriptor);
     }
 
     return error;
 }
 
-char* readContent(int descriptor, int size, int *error){
+int sendNotice(int noticeId, int channelId, int descriptor) {
+    int error;
+    int noticeCopy = noticeId;
+    int channelCopy = channelId;
+    int counter = 0;
+    while (noticeCopy > 0) {
+        noticeCopy /= 10;
+        counter++;
+    }
+    while (channelCopy > 0) {
+        channelCopy /= 10;
+        counter++;
+    }
+    char *response = (char *) malloc(sizeof(char) * (counter + 6));
+    sprintf(response, "1;6;%d;%d", noticeId, channelId);
+    error = write(descriptor, response, strlen(response) * sizeof(char));
+    free(response);
+    return error;
+}
+
+char *readContent(int descriptor, int size, int *error) {
     char *content = (char *) malloc(sizeof(char) * size);
     char textBuffer[101];
     memset(textBuffer, 0, 101);

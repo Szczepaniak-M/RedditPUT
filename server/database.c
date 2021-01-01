@@ -76,6 +76,22 @@ int createTables(ServerStatus *status) {
         ");";
 
     error = createTableCheck(status, sqlStatement, "POST");
+    if (error != SQLITE_OK) {
+        return error;
+    }
+
+    // Creating table NOTICE
+    sqlStatement = "CREATE TABLE IF NOT EXISTS NOTICE("  \
+        "ID             INTEGER     PRIMARY KEY     AUTOINCREMENT   NOT NULL," \
+        "USER_ID        INTEGER     NOT NULL," \
+        "CHANNEL_ID     INTEGER     NOT NULL," \
+        "POST_ID        INTEGER     NOT NULL," \
+        "FOREIGN KEY(USER_ID) REFERENCES USER(ID)," \
+        "FOREIGN KEY(CHANNEL_ID) REFERENCES CHANNEL(ID)," \
+        "FOREIGN KEY(POST_ID) REFERENCES POST(ID)" \
+        ");";
+
+    error = createTableCheck(status, sqlStatement, "NOTICE");
     return error;
 }
 
@@ -242,6 +258,54 @@ int insertSubscription(ServerStatus *status, int userId, int channelId) {
     return SQLITE_OK;
 }
 
+int insertNotice(ServerStatus *status, int userId, int channelId, int postId) {
+    int error;
+    sqlite3_stmt *stmt;
+    const char *sqlStatement = "INSERT INTO NOTICE(USER_ID, CHANNEL_ID, POST_ID) VALUES (?, ?, ?);";
+
+    error = sqlite3_prepare_v2(status->db, sqlStatement, -1, &stmt, NULL);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during preparing statement INSERT NOTICE: %s\n",
+                status->programName, sqlite3_errmsg(status->db));
+        sqlite3_finalize(stmt);
+        return error;
+    }
+
+    error = sqlite3_bind_int(stmt, 1, userId);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during binding parameter USER_ID with value %d in INSERT NOTICE: %s\n",
+                status->programName, userId, sqlite3_errmsg(status->db));
+        sqlite3_finalize(stmt);
+        return error;
+    }
+
+    error = sqlite3_bind_int(stmt, 2, channelId);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during binding parameter CHANNEL_ID with value %d in INSERT NOTICE: %s\n",
+                status->programName, channelId, sqlite3_errmsg(status->db));
+        sqlite3_finalize(stmt);
+        return error;
+    }
+
+    error = sqlite3_bind_int(stmt, 3, postId);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during binding parameter POST_ID with value %d in INSERT NOTICE: %s\n",
+                status->programName, channelId, sqlite3_errmsg(status->db));
+        sqlite3_finalize(stmt);
+        return error;
+    }
+
+    error = sqlite3_step(stmt);
+    if (error != SQLITE_DONE) {
+        fprintf(stderr, "%s: SQL error during inserting NOTICE: %s\n",
+                status->programName, sqlite3_errmsg(status->db));
+        sqlite3_finalize(stmt);
+        return error;
+    }
+    sqlite3_finalize(stmt);
+    return SQLITE_OK;
+}
+
 int deleteSubscription(ServerStatus *status, int userId, int channelId) {
     int error;
     sqlite3_stmt *stmt;
@@ -274,6 +338,46 @@ int deleteSubscription(ServerStatus *status, int userId, int channelId) {
     error = sqlite3_step(stmt);
     if (error != SQLITE_DONE) {
         fprintf(stderr, "%s: SQL error during deleting USER_CHANNEL: %s\n",
+                status->programName, sqlite3_errmsg(status->db));
+        sqlite3_finalize(stmt);
+        return error;
+    }
+    sqlite3_finalize(stmt);
+    return SQLITE_OK;
+}
+
+int deleteNotice(ServerStatus *status, int userId, int channelId) {
+    int error;
+    sqlite3_stmt *stmt;
+    const char *sqlStatement = "DELETE FROM NOTICE WHERE USER_ID = ? AND CHANNEL_ID = ?";
+
+    error = sqlite3_prepare_v2(status->db, sqlStatement, -1, &stmt, NULL);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during preparing statement DELETE NOTICE: %s\n",
+                status->programName, sqlite3_errmsg(status->db));
+        sqlite3_finalize(stmt);
+        return error;
+    }
+
+    error = sqlite3_bind_int(stmt, 1, userId);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during binding parameter USER_ID with value %d in DELETE NOTICE: %s\n",
+                status->programName, userId, sqlite3_errmsg(status->db));
+        sqlite3_finalize(stmt);
+        return error;
+    }
+
+    error = sqlite3_bind_int(stmt, 2, channelId);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during binding parameter CHANNEL_ID with value %d in DELETE NOTICE: %s\n",
+                status->programName, channelId, sqlite3_errmsg(status->db));
+        sqlite3_finalize(stmt);
+        return error;
+    }
+
+    error = sqlite3_step(stmt);
+    if (error != SQLITE_DONE) {
+        fprintf(stderr, "%s: SQL error during deleting NOTICE: %s\n",
                 status->programName, sqlite3_errmsg(status->db));
         sqlite3_finalize(stmt);
         return error;
