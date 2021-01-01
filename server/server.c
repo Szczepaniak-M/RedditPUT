@@ -47,6 +47,7 @@ void *connectionHandler(void *data) {
     pthread_detach(pthread_self());
     int connectionSocketDescriptor;
     ServerStatus *status = (ServerStatus *) data;
+    int i;
     while (1) {
         connectionSocketDescriptor = accept(status->serverSocketDescriptor, NULL, NULL);
         if (connectionSocketDescriptor < 0) {
@@ -57,7 +58,6 @@ void *connectionHandler(void *data) {
 
         pthread_mutex_lock(&status->mutex);
         int success = 0;
-        int i = 0;
         for (i = 0; i < ACTIVE_USER_LIMIT; i++) {
             if (status->activeUsers[i].descriptor == -1) {
                 status->activeUsers[i].descriptor = connectionSocketDescriptor;
@@ -67,7 +67,7 @@ void *connectionHandler(void *data) {
         }
 
         if (success) {
-            handleConnection(status, connectionSocketDescriptor, i);
+            handleConnection(status, i);
         } else {
             close(connectionSocketDescriptor);
         }
@@ -75,13 +75,14 @@ void *connectionHandler(void *data) {
     }
 }
 
-void handleConnection(ServerStatus *status, int descriptor, int index) {
+void handleConnection(ServerStatus *status, int index) {
     int error;
     pthread_t thread;
 
     ThreadData *data = (ThreadData *) malloc(sizeof(ThreadData));
     data->status = status;
-    data->descriptor = descriptor;
+    data->index = index;
+
 
     error = pthread_create(&thread, NULL, clientThread, (void *) data);
     if (error) {

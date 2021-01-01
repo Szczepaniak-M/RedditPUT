@@ -31,7 +31,7 @@ typedef struct ServerStatus {
 
 typedef struct ThreadData {
     ServerStatus *status;
-    int descriptor;
+    int index;
 } ThreadData;
 
 typedef struct User {

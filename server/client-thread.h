@@ -23,6 +23,8 @@ int subscribeChannel(ServerStatus *status, int descriptor, int size);
 
 int unsubscribeChannel(ServerStatus *status, int descriptor, int size);
 
+char* readContent(int descriptor, int size, int *error);
+
 void clear(char *requestType, int *charCounter, int *delimiterCounter, char *sizeBuffer);
 
 #endif //SERVER_CLIENT_THREAD_H

@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS= -Wall -pthread -l sqlite3
+CFLAGS= -Wall -pthread -lcrypt -l sqlite3
 
 
 all: main.c structures.h server.c server.h database.c database.h client-thread.c client-thread.h

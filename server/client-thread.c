@@ -2,8 +2,9 @@
 
 void *clientThread(void *inputData) {
     ThreadData *data = (ThreadData *) inputData;
-    int descriptor = data->descriptor;
+    int index = data->index;
     ServerStatus *status = data->status;
+    int descriptor = data->status->activeUsers[index].descriptor;
     int error;
     char sizeBuffer[15];
     char readChar;
@@ -73,6 +74,15 @@ void *clientThread(void *inputData) {
 int signUp(ServerStatus *status, int descriptor, int size) {
     int error;
     User user;
+
+    char* content = readContent(descriptor, size, &error);
+    if (error == -1) {
+        free(content);
+        return error;
+    }
+
+    free(content);
+    char *result = crypt("Haslo", "AA");
     error = insertUser(status, &user);
     for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
         if (status->activeUsers[i].descriptor == descriptor) {
@@ -86,6 +96,13 @@ int signUp(ServerStatus *status, int descriptor, int size) {
 int login(ServerStatus *status, int descriptor, int size) {
     User user;
     int error;
+
+    char* content = readContent(descriptor, size, &error);
+    if (error == -1) {
+        free(content);
+        return error;
+    }
+
     for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
         if (status->activeUsers[i].descriptor == descriptor) {
             status->activeUsers[i].id = user.id;
@@ -98,6 +115,13 @@ int login(ServerStatus *status, int descriptor, int size) {
 int addPost(ServerStatus *status, int descriptor, int size) {
     Post post;
     int error;
+
+    char* content = readContent(descriptor, size, &error);
+    if (error == -1) {
+        free(content);
+        return error;
+    }
+
     error = insertPost(status, &post);
     return error;
 }
@@ -105,6 +129,13 @@ int addPost(ServerStatus *status, int descriptor, int size) {
 int addChannel(ServerStatus *status, int descriptor, int size) {
     Channel channel;
     int error;
+
+    char* content = readContent(descriptor, size, &error);
+    if (error == -1) {
+        free(content);
+        return error;
+    }
+
     error = insertChannel(status, &channel);
     return error;
 }
@@ -113,6 +144,13 @@ int subscribeChannel(ServerStatus *status, int descriptor, int size) {
     int userId;
     int channelId;
     int error;
+
+    char* content = readContent(descriptor, size, &error);
+    if (error == -1) {
+        free(content);
+        return error;
+    }
+
     error = insertSubscription(status, userId, channelId);
     return error;
 
@@ -122,8 +160,34 @@ int unsubscribeChannel(ServerStatus *status, int descriptor, int size) {
     int userId;
     int channelId;
     int error;
+
+    char* content = readContent(descriptor, size, &error);
+    if (error == -1) {
+        free(content);
+        return error;
+    }
+
     error = deleteSubscription(status, userId, channelId);
     return error;
+}
+
+char* readContent(int descriptor, int size, int *error){
+    char *content = (char *) malloc(sizeof(char) * size);
+    char textBuffer[101];
+    memset(textBuffer, 0, 101);
+    int counter = 0;
+    int readByte = size < 100 ? size : 100;
+    while ((*error = read(descriptor, textBuffer, readByte)) && *error > 0) {
+        strcpy(content + counter, textBuffer);
+        counter += *error;
+        size -= *error;
+        readByte = size < 100 ? size : 100;
+        if (size == 0 || *error == -1) {
+            break;
+        }
+        memset(textBuffer, 0, 100);
+    }
+    return content;
 }
 
 void clear(char *requestType, int *charCounter, int *delimiterCounter, char *sizeBuffer) {

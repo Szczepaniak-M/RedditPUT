@@ -22,7 +22,7 @@ int createConnectionHandlerThread(ServerStatus *status);
 
 void *connectionHandler(void *data);
 
-void handleConnection(ServerStatus *status, int descriptor, int index);
+void handleConnection(ServerStatus *status, int index);
 
 int waitForExit(ServerStatus *status);
 
