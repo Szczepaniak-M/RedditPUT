@@ -15,7 +15,7 @@ public class Main extends Application {
 		System.out.println("Welcome to RedditPUT");
         Parent root = FXMLLoader.load(getClass().getResource("LoginWindow.fxml"));
         primaryStage.setTitle("RedditPUT");
-        primaryStage.setScene(new Scene(root, 600, 680));
+        primaryStage.setScene(new Scene(root, 800, 680));
         primaryStage.show();
 	}
 	
