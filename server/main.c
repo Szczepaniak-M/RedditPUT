@@ -18,9 +18,14 @@ int main(int argc, char *argv[]) {
         status.activeUsers[i].descriptor = -1;
         status.pthreads[i].isInitialized = 0;
     }
-    error = pthread_mutex_init(&status.mutex, NULL);
+    error = pthread_mutex_init(&status.activeUsersMutex, NULL);
     if ( error != 0) {
-        fprintf(stderr, "%s: Błąd podczas tworzenia mutex'u\n", argv[0]);
+        fprintf(stderr, "%s: Błąd podczas tworzenia activeUsersMutex\n", argv[0]);
+        return 1;
+    }
+    error = pthread_mutex_init(&status.cryptMutex, NULL);
+    if ( error != 0) {
+        fprintf(stderr, "%s: Błąd podczas tworzenia cryptMutex\n", argv[0]);
         return 1;
     }
 
