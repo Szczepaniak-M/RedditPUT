@@ -61,7 +61,6 @@ int main(int argc, char *argv[]) {
         sqlite3_close(status.db);
         return error;
     }
-
     sqlite3_close(status.db);
     return 0;
 }

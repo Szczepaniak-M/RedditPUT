@@ -82,7 +82,8 @@ int signUp(ServerStatus *status, int descriptor, int size) {
     }
 
     char *savePointer;
-    user.name = strtok_r(content, ";", &savePointer);
+    char *name = strtok_r(content, ";", &savePointer);
+    user.name = name;
     user.password = strtok_r(NULL, ";", &savePointer);
 
     // checking if name is duplicated
@@ -93,6 +94,7 @@ int signUp(ServerStatus *status, int descriptor, int size) {
         return error;
     }
 
+    user.name = name;
     // encrypt password
     pthread_mutex_lock(&status->cryptMutex);
     char *password = crypt(user.password, "PP");
@@ -102,13 +104,12 @@ int signUp(ServerStatus *status, int descriptor, int size) {
 
     // insert user
     error = insertUser(status, &user);
-    free(user.password);
-    free(content);
 
     // get user id
     error = selectUserByName(status, &user);
     free(user.password);
     free(user.name);
+    free(content);
 
     for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
         if (status->activeUsers[i].descriptor == descriptor) {
@@ -147,7 +148,6 @@ int login(ServerStatus *status, int descriptor, int size) {
 
     free(user.name);
     free(user.password);
-    free(cryptPassword);
     free(content);
 
     for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
@@ -164,7 +164,7 @@ int login(ServerStatus *status, int descriptor, int size) {
 
     sqlite3_stmt *stmt = NULL;
     int channelId;
-    error = createStatementSelectNoticesByUserId(status, user.id, stmt);
+    error = createStatementSelectNoticesByUserId(status, user.id, &stmt);
     error = sqlite3_step(stmt);
     while (error == SQLITE_ROW) {
         channelId = sqlite3_column_int(stmt, 0);
@@ -206,7 +206,7 @@ int addPost(ServerStatus *status, int descriptor, int size) {
     sqlite3_stmt *stmt = NULL;
     int userId;
     error = selectNewPostIdByUserId(status, post.userId, &post.id);
-    error = createStatementSelectUsersByChannelId(status, post.channelId, stmt);
+    error = createStatementSelectUsersByChannelId(status, post.channelId, &stmt);
     error = sqlite3_step(stmt);
     while (error == SQLITE_ROW) {
         userId = sqlite3_column_int(stmt, 0);

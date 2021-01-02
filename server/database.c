@@ -465,46 +465,46 @@ int selectNewPostIdByUserId(ServerStatus *status, int userId, int *postId) {
     return SQLITE_OK;
 }
 
-int createStatementSelectNoticesByUserId(ServerStatus *status, int userId, sqlite3_stmt *stmt) {
+int createStatementSelectNoticesByUserId(ServerStatus *status, int userId, sqlite3_stmt **stmt) {
     int error;
     const char *sqlStatement = "SELECT CHANNEL_ID FROM NOTICE WHERE USER_ID = ?;";
 
-    error = sqlite3_prepare_v2(status->db, sqlStatement, -1, &stmt, NULL);
+    error = sqlite3_prepare_v2(status->db, sqlStatement, -1, stmt, NULL);
     if (error != SQLITE_OK) {
         fprintf(stderr, "%s: SQL error during preparing statement SELECT NOTICE: %s\n",
                 status->programName, sqlite3_errmsg(status->db));
-        sqlite3_finalize(stmt);
+        sqlite3_finalize(*stmt);
         return error;
     }
 
-    error = sqlite3_bind_int(stmt, 1, userId);
+    error = sqlite3_bind_int(*stmt, 1, userId);
     if (error != SQLITE_OK) {
         fprintf(stderr, "%s: SQL error during binding parameter USER_ID with value %d in SELECT NOTICE: %s\n",
                 status->programName, userId, sqlite3_errmsg(status->db));
-        sqlite3_finalize(stmt);
+        sqlite3_finalize(*stmt);
         return error;
     }
 
     return SQLITE_OK;
 }
 
-int createStatementSelectUsersByChannelId(ServerStatus *status, int channelId, sqlite3_stmt *stmt) {
+int createStatementSelectUsersByChannelId(ServerStatus *status, int channelId, sqlite3_stmt **stmt) {
     int error;
     const char *sqlStatement = "SELECT USER_ID FROM USER_CHANNEL WHERE CHANNEL_ID = ?;";
 
-    error = sqlite3_prepare_v2(status->db, sqlStatement, -1, &stmt, NULL);
+    error = sqlite3_prepare_v2(status->db, sqlStatement, -1, stmt, NULL);
     if (error != SQLITE_OK) {
         fprintf(stderr, "%s: SQL error during preparing statement SELECT USER_CHANNEL: %s\n",
                 status->programName, sqlite3_errmsg(status->db));
-        sqlite3_finalize(stmt);
+        sqlite3_finalize(*stmt);
         return error;
     }
 
-    error = sqlite3_bind_int(stmt, 1, channelId);
+    error = sqlite3_bind_int(*stmt, 1, channelId);
     if (error != SQLITE_OK) {
         fprintf(stderr, "%s: SQL error during binding parameter USER_ID with value %d in SELECT USER_CHANNEL: %s\n",
                 status->programName, channelId, sqlite3_errmsg(status->db));
-        sqlite3_finalize(stmt);
+        sqlite3_finalize(*stmt);
         return error;
     }
 
