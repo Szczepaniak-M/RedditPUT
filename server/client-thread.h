@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <string.h>
+#include <crypt.h>
 
 #include "structures.h"
 #include "database.h"

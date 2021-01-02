@@ -1,7 +1,11 @@
 package application;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.ConnectException;
+import java.net.Socket;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.ResourceBundle;
 
 import javafx.event.ActionEvent;
@@ -32,9 +36,22 @@ public class LoginController implements Initializable {
 	}
 	
 	@FXML
-    public void loginBtnOnClickListener(ActionEvent event) throws IOException {
-    	System.out.println("User " + tfLogin.getText() + " password " + tfPassword.getText()
-    			+ " server address " + tfServerAddress.getText() + " port " + tfPort.getText());
+    public void loginBtnOnClickListener() throws IOException {
+    	System.out.println("User " + tfLogin.getText() + " server address " + tfServerAddress.getText() + " port " + tfPort.getText());
+    	//set connection
+    	try (Socket clientSocket = new Socket(tfServerAddress.getText(), Integer.valueOf(tfPort.getText()))) {
+    		OutputStream output = clientSocket.getOutputStream();
+    		int loginLength = tfLogin.getText().length();
+    		int passwordLength = tfPassword.getText().length();
+    		int totalLength = loginLength + passwordLength + 1;
+    		String request = totalLength + ";0;" + tfLogin.getText() + ";" + tfPassword.getText();
+    		System.out.println(request);
+    		byte[] loginInBytes = request.getBytes();
+    		output.write(loginInBytes);
+    	} catch (ConnectException ex) {
+            System.out.println("Server not found: " + ex.getMessage());
+    	}
+    	
     	//load main scene
     	Pane pane = FXMLLoader.load(getClass().getResource("MainWindow.fxml"));
     	rootPane.getChildren().setAll(pane);
