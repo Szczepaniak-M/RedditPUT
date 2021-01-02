@@ -71,7 +71,6 @@ int createTables(ServerStatus *status) {
         "USER_ID        INTEGER     NOT NULL," \
         "CHANNEL_ID     INTEGER     NOT NULL," \
         "CONTENT        TEXT        NOT NULL," \
-        "ADD_TIME       DATETIME    NOT NULL," \
         "FOREIGN KEY(USER_ID) REFERENCES USER(ID)," \
         "FOREIGN KEY(CHANNEL_ID) REFERENCES CHANNEL(ID)" \
         ");";
@@ -174,7 +173,7 @@ int insertPost(ServerStatus *status, Post *post) {
 
     int error;
     sqlite3_stmt *stmt;
-    const char *sqlStatement = "INSERT INTO POST(USER_ID, CHANNEL_ID, CONTENT, ADD_TIME) VALUES (?, ?, ?, CURRENT_TIMESTAMP);";
+    const char *sqlStatement = "INSERT INTO POST(USER_ID, CHANNEL_ID, CONTENT) VALUES (?, ?, ?);";
 
     error = sqlite3_prepare_v2(status->db, sqlStatement, -1, &stmt, NULL);
     if (error != SQLITE_OK) {
@@ -432,7 +431,7 @@ int selectUserByName(ServerStatus *status, User *user) {
 int selectNewPostIdByUserId(ServerStatus *status, int userId, int *postId) {
     int error;
     sqlite3_stmt *stmt;
-    const char *sqlStatement = "SELECT ID FROM POST WHERE USER_ID = ? ORDER BY ADD_TIME DESC;";
+    const char *sqlStatement = "SELECT ID FROM POST WHERE USER_ID = ? ORDER BY ID DESC;";
 
     error = sqlite3_prepare_v2(status->db, sqlStatement, -1, &stmt, NULL);
     if (error != SQLITE_OK) {
@@ -465,7 +464,7 @@ int selectNewPostIdByUserId(ServerStatus *status, int userId, int *postId) {
     return SQLITE_OK;
 }
 
-int createStatementSelectNoticesByUserId(ServerStatus *status, int userId, sqlite3_stmt **stmt) {
+int selectNoticesByUserId(ServerStatus *status, int userId, sqlite3_stmt **stmt) {
     int error;
     const char *sqlStatement = "SELECT CHANNEL_ID FROM NOTICE WHERE USER_ID = ?;";
 
@@ -485,10 +484,12 @@ int createStatementSelectNoticesByUserId(ServerStatus *status, int userId, sqlit
         return error;
     }
 
-    return SQLITE_OK;
+    error = sqlite3_step(*stmt);
+
+    return error;
 }
 
-int createStatementSelectUsersByChannelId(ServerStatus *status, int channelId, sqlite3_stmt **stmt) {
+int selectUsersByChannelId(ServerStatus *status, int channelId, sqlite3_stmt **stmt) {
     int error;
     const char *sqlStatement = "SELECT USER_ID FROM USER_CHANNEL WHERE CHANNEL_ID = ?;";
 
@@ -507,8 +508,61 @@ int createStatementSelectUsersByChannelId(ServerStatus *status, int channelId, s
         sqlite3_finalize(*stmt);
         return error;
     }
+    error = sqlite3_step(*stmt);
+    return error;
+}
 
-    return SQLITE_OK;
+int selectChannelsByUserId(ServerStatus *status, int userId, sqlite3_stmt **stmt) {
+    int error;
+    const char *sqlStatement = "SELECT c.ID, c.NAME FROM USER_CHANNEL " \
+                               "INNER JOIN CHANNEL C on C.ID = USER_CHANNEL.CHANNEL_ID" \
+                               "WHERE USER_ID = ?;";
+
+    error = sqlite3_prepare_v2(status->db, sqlStatement, -1, stmt, NULL);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during preparing statement SELECT CHANNEL: %s\n",
+                status->programName, sqlite3_errmsg(status->db));
+        sqlite3_finalize(*stmt);
+        return error;
+    }
+
+    error = sqlite3_bind_int(*stmt, 1, userId);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during binding parameter USER_ID with value %d in SELECT CHANNEL: %s\n",
+                status->programName, userId, sqlite3_errmsg(status->db));
+        sqlite3_finalize(*stmt);
+        return error;
+    }
+
+    error = sqlite3_step(*stmt);
+    return error;
+}
+
+int selectPostByChannelId(ServerStatus *status, int channelId, sqlite3_stmt **stmt) {
+    int error;
+    const char *sqlStatement = "SELECT p.ID, u.ID, u.NAME, p.CHANNEL_ID, p.CONTENT "
+                               "FROM POST p " \
+                               "INNER JOIN USER U on U.ID = p.USER_ID " \
+                               "WHERE CHANNEL_ID = ?;";
+
+    error = sqlite3_prepare_v2(status->db, sqlStatement, -1, stmt, NULL);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during preparing statement SELECT CHANNEL: %s\n",
+                status->programName, sqlite3_errmsg(status->db));
+        sqlite3_finalize(*stmt);
+        return error;
+    }
+
+    error = sqlite3_bind_int(*stmt, 1, channelId);
+    if (error != SQLITE_OK) {
+        fprintf(stderr, "%s: SQL error during binding parameter USER_ID with value %d in SELECT CHANNEL: %s\n",
+                status->programName, channelId, sqlite3_errmsg(status->db));
+        sqlite3_finalize(*stmt);
+        return error;
+    }
+
+    error = sqlite3_step(*stmt);
+    return error;
 }
 
 

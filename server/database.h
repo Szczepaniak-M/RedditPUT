@@ -32,9 +32,13 @@ int selectUserByName(ServerStatus *status, User *user);
 
 int selectNewPostIdByUserId(ServerStatus *status, int userId, int *postId);
 
-int createStatementSelectNoticesByUserId(ServerStatus *status, int userId, sqlite3_stmt **stmt);
+int selectNoticesByUserId(ServerStatus *status, int userId, sqlite3_stmt **stmt);
 
-int createStatementSelectUsersByChannelId(ServerStatus *status, int channelId, sqlite3_stmt **stmt);
+int selectUsersByChannelId(ServerStatus *status, int channelId, sqlite3_stmt **stmt);
+
+int selectChannelsByUserId(ServerStatus *status, int userId, sqlite3_stmt **stmt);
+
+int selectPostByChannelId(ServerStatus *status, int userId, sqlite3_stmt **stmt);
 
 
 #endif

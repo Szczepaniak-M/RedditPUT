@@ -164,8 +164,7 @@ int login(ServerStatus *status, int descriptor, int size) {
 
     sqlite3_stmt *stmt = NULL;
     int channelId;
-    error = createStatementSelectNoticesByUserId(status, user.id, &stmt);
-    error = sqlite3_step(stmt);
+    error = selectNoticesByUserId(status, user.id, &stmt);
     while (error == SQLITE_ROW) {
         channelId = sqlite3_column_int(stmt, 0);
         sendNotice(channelId, descriptor);
@@ -206,8 +205,7 @@ int addPost(ServerStatus *status, int descriptor, int size) {
     sqlite3_stmt *stmt = NULL;
     int userId;
     error = selectNewPostIdByUserId(status, post.userId, &post.id);
-    error = createStatementSelectUsersByChannelId(status, post.channelId, &stmt);
-    error = sqlite3_step(stmt);
+    error = selectUsersByChannelId(status, post.channelId, &stmt);
     while (error == SQLITE_ROW) {
         userId = sqlite3_column_int(stmt, 0);
         error = insertNotice(status, userId, post.channelId, post.id);
