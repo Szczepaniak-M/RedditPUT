@@ -13,6 +13,7 @@ void *clientThread(void *inputData) {
     int charCounter = 0;
     int size = 0;
     while ((error = read(descriptor, &readChar, 1)) && error > 0) {
+        error = 0;
         if (delimiterCounter == 0 && readChar != ';') {
             sizeBuffer[charCounter] = readChar;
             charCounter++;
@@ -49,10 +50,13 @@ void *clientThread(void *inputData) {
             }
             clear(&requestType, &charCounter, &delimiterCounter, sizeBuffer);
         }
-        if (error == -1) {
+        if (error != 0) {
+            fprintf(stderr, "%d\n",
+                    error);
             break;
         }
     }
+    
     pthread_mutex_lock(&status->activeUsersMutex);
     for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
         if (status->activeUsers[i].descriptor == descriptor) {
@@ -115,7 +119,7 @@ int signUp(ServerStatus *status, int descriptor, int size) {
     } else {
         sendResponse('0', 1, descriptor);
     }
-    return error;
+    return 0;
 }
 
 int login(ServerStatus *status, int descriptor, int size) {
@@ -182,7 +186,8 @@ int login(ServerStatus *status, int descriptor, int size) {
         return error;
     }
     sqlite3_finalize(stmt);
-    return error;
+
+    return 0;
 }
 
 int addPost(ServerStatus *status, int descriptor, int size) {
@@ -236,7 +241,7 @@ int addPost(ServerStatus *status, int descriptor, int size) {
         return error;
     }
     sqlite3_finalize(stmt);
-    return error;
+    return 0;
 }
 
 int addChannel(ServerStatus *status, int descriptor, int size) {
@@ -257,7 +262,7 @@ int addChannel(ServerStatus *status, int descriptor, int size) {
     } else {
         sendResponse('3', 1, descriptor);
     }
-    return error;
+    return 0;
 }
 
 int subscribeChannel(ServerStatus *status, int descriptor, int size) {
@@ -282,7 +287,7 @@ int subscribeChannel(ServerStatus *status, int descriptor, int size) {
     } else {
         sendResponse('4', 1, descriptor);
     }
-    return error;
+    return 0;
 
 }
 
@@ -309,7 +314,7 @@ int unsubscribeChannel(ServerStatus *status, int descriptor, int size) {
         sendResponse('5', 1, descriptor);
     }
 
-    return error;
+    return 0;
 }
 int getPostByChannelId(ServerStatus *status, int descriptor, int size) {
     int error;
