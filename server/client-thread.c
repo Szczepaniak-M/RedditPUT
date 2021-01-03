@@ -56,7 +56,7 @@ void *clientThread(void *inputData) {
             break;
         }
     }
-    
+
     pthread_mutex_lock(&status->activeUsersMutex);
     for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
         if (status->activeUsers[i].descriptor == descriptor) {
@@ -136,27 +136,34 @@ int login(ServerStatus *status, int descriptor, int size) {
     user.name = strtok_r(content, ";", &savePointer);
     char *password = strtok_r(NULL, ";", &savePointer);
     error = selectUserByName(status, &user);
+    if (user.name == NULL) {
+        sendResponse('0', 1, descriptor);
+        free(content);
+        return error;
+    }
 
     // encrypt password
     pthread_mutex_lock(&status->cryptMutex);
     char *cryptPassword = crypt(password, "PP");
-    strcpy(user.password, cryptPassword);
+    error = strcmp(user.password, cryptPassword);
     pthread_mutex_unlock(&status->cryptMutex);
 
     free(user.name);
     free(user.password);
     free(content);
 
+    if (error != 0) {
+        sendResponse('1', 1, descriptor);
+        return 0;
+    } else {
+        sendResponse('1', 0, descriptor);
+    }
+
+
     for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
         if (status->activeUsers[i].descriptor == descriptor) {
             status->activeUsers[i].id = user.id;
-
         }
-    }
-    if (error == 0) {
-        sendResponse('1', 0, descriptor);
-    } else {
-        sendResponse('1', 1, descriptor);
     }
 
     sqlite3_stmt *stmt = NULL;
