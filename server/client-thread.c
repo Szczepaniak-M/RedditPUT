@@ -25,41 +25,34 @@ void *clientThread(void *inputData) {
             switch (requestType) {
                 case '0': // rejestracja
                     error = signUp(status, descriptor, size);
-                    clear(&requestType, &charCounter, &delimiterCounter, sizeBuffer);
                     break;
                 case '1': // logowanie
                     error = login(status, descriptor, size);
-                    clear(&requestType, &charCounter, &delimiterCounter, sizeBuffer);
                     break;
                 case '2': // dodaj post
                     error = addPost(status, descriptor, size);
-                    clear(&requestType, &charCounter, &delimiterCounter, sizeBuffer);
                     break;
                 case '3': // dodaj kanał
                     error = addChannel(status, descriptor, size);
-                    clear(&requestType, &charCounter, &delimiterCounter, sizeBuffer);
                     break;
                 case '4': // zasubskrybuj kanał
                     error = subscribeChannel(status, descriptor, size);
-                    clear(&requestType, &charCounter, &delimiterCounter, sizeBuffer);
                     break;
                 case '5': // usuń subksrypcję
                     error = unsubscribeChannel(status, descriptor, size);
-                    clear(&requestType, &charCounter, &delimiterCounter, sizeBuffer);
                     break;
                 case '8': // usuń subksrypcję
                     error = getPostByChannelId(status, descriptor, size);
-                    clear(&requestType, &charCounter, &delimiterCounter, sizeBuffer);
                     break;
                 default:
                     break;
             }
+            clear(&requestType, &charCounter, &delimiterCounter, sizeBuffer);
         }
         if (error == -1) {
-
+            break;
         }
     }
-
     pthread_mutex_lock(&status->activeUsersMutex);
     for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
         if (status->activeUsers[i].descriptor == descriptor) {
@@ -97,7 +90,6 @@ int signUp(ServerStatus *status, int descriptor, int size) {
         free(content);
         return error;
     }
-
     user.name = name;
     // encrypt password
     pthread_mutex_lock(&status->cryptMutex);
@@ -108,19 +100,16 @@ int signUp(ServerStatus *status, int descriptor, int size) {
 
     // insert user
     error = insertUser(status, &user);
-
     // get user id
     error = selectUserByName(status, &user);
     free(user.password);
     free(user.name);
     free(content);
-
     for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
         if (status->activeUsers[i].descriptor == descriptor) {
             status->activeUsers[i].id = user.id;
         }
     }
-
     if (error == 0) {
         sendResponse('0', 0, descriptor);
     } else {
@@ -173,11 +162,10 @@ int login(ServerStatus *status, int descriptor, int size) {
         channel.id = sqlite3_column_int(stmt, 0);
         channel.name = (char *) sqlite3_column_text(stmt, 0);
         sendChannel(&channel, descriptor);
+        error = sqlite3_step(stmt);
     }
     if (error != SQLITE_DONE) {
-        fprintf(stderr, "%s: SQL error during selecting  USER: %s\n",
-                status->programName, sqlite3_errmsg(status->db));
-        sqlite3_finalize(stmt);
+        executeError(status, "selectChannelsByUserId", stmt);
         return error;
     }
     sqlite3_finalize(stmt);
@@ -187,11 +175,10 @@ int login(ServerStatus *status, int descriptor, int size) {
     while (error == SQLITE_ROW) {
         channelId = sqlite3_column_int(stmt, 0);
         sendNotice(channelId, descriptor);
+        error = sqlite3_step(stmt);
     }
     if (error != SQLITE_DONE) {
-        fprintf(stderr, "%s: SQL error during selecting  USER: %s\n",
-                status->programName, sqlite3_errmsg(status->db));
-        sqlite3_finalize(stmt);
+        executeError(status, "selectNoticesByUserId", stmt);
         return error;
     }
     sqlite3_finalize(stmt);
@@ -228,6 +215,9 @@ int addPost(ServerStatus *status, int descriptor, int size) {
     while (error == SQLITE_ROW) {
         userId = sqlite3_column_int(stmt, 0);
         error = insertNotice(status, userId, post.channelId, post.id);
+        if (error != SQLITE_OK) {
+            break;
+        }
         pthread_mutex_lock(&status->activeUsersMutex);
         for(int i = 0; i < ACTIVE_USER_LIMIT; i++){
             if (status->activeUsers[i].id == userId){
@@ -239,11 +229,10 @@ int addPost(ServerStatus *status, int descriptor, int size) {
             }
         }
         pthread_mutex_unlock(&status->activeUsersMutex);
+        error = sqlite3_step(stmt);
     }
     if (error != SQLITE_DONE) {
-        fprintf(stderr, "%s: SQL error during selecting  USER: %s\n",
-                status->programName, sqlite3_errmsg(status->db));
-        sqlite3_finalize(stmt);
+        executeError(status, "selectUsersByChannelId", stmt);
         return error;
     }
     sqlite3_finalize(stmt);
@@ -330,19 +319,18 @@ int getPostByChannelId(ServerStatus *status, int descriptor, int size) {
         return error;
     }
     int channelId = atoi(content);
-    sqlite3_stmt *stmt = NULL;
-    selectPostByChannelId(status, channelId, &stmt);
     Post post;
+    sqlite3_stmt *stmt = NULL;
+    error = selectPostByChannelId(status, channelId, &stmt);
     while (error == SQLITE_ROW) {
         post.id = sqlite3_column_int(stmt, 0);
         post.userName = (char *) sqlite3_column_text(stmt, 1);
         post.content = (char *) sqlite3_column_text(stmt, 2);
         sendPost(&post, descriptor);
+        error = sqlite3_step(stmt);
     }
     if (error != SQLITE_DONE) {
-        fprintf(stderr, "%s: SQL error during selecting  USER: %s\n",
-                status->programName, sqlite3_errmsg(status->db));
-        sqlite3_finalize(stmt);
+        executeError(status, "selectPostByChannelId", stmt);
         return error;
     }
     sqlite3_finalize(stmt);
@@ -354,7 +342,7 @@ int sendNotice(int channelId, int descriptor) {
     int channelIdSize = intLength(channelId);
     int dataSize = intLength(channelIdSize);
     char *response = (char *) malloc(sizeof(char) * (dataSize + channelIdSize + 4));
-    sprintf(response, "%d;6;%d", dataSize, channelId);
+    sprintf(response, "%d;6;%d", channelIdSize, channelId);
     error = write(descriptor, response, strlen(response) * sizeof(char));
     free(response);
     return error;
@@ -364,9 +352,10 @@ int sendChannel(Channel *channel, int descriptor) {
     int error;
     int channelIdSize = intLength(channel->id);
     int channelNameSize = strlen(channel->name);
-    int dataSize = intLength(channelIdSize + channelNameSize + 1);
-    char *response = (char *) malloc(sizeof(char) * (dataSize + channelIdSize + channelNameSize + 5));
-    sprintf(response, "%d;7;%d;%s", dataSize, channel->id, channel->name);
+    int dataLength = channelIdSize + channelNameSize + 1;
+    int dataSize = intLength(dataLength);
+    char *response = (char *) malloc(sizeof(char) * (dataSize + dataLength + 3));
+    sprintf(response, "%d;7;%d;%s", dataLength, channel->id, channel->name);
     error = write(descriptor, response, strlen(response) * sizeof(char));
     free(response);
     return error;
@@ -377,9 +366,10 @@ int sendPost(Post *post, int descriptor) {
     int postIdSize = intLength(post->id);
     int userNameSize = strlen(post->userName);
     int contentSize = strlen(post->content);
-    int dataSize = intLength(postIdSize + userNameSize + contentSize + 2);
-    char *response = (char *) malloc(sizeof(char) * (dataSize + postIdSize + userNameSize + contentSize + 6));
-    sprintf(response, "%d;8;%d;%s;%s", dataSize, post->id, post->userName, post->content);
+    int dataLength = postIdSize + userNameSize + contentSize + 2;
+    int dataSize = intLength(dataLength);
+    char *response = (char *) malloc(sizeof(char) * (dataSize + dataLength + 3));
+    sprintf(response, "%d;8;%d;%s;%s", dataLength, post->id, post->userName, post->content);
     error = write(descriptor, response, strlen(response) * sizeof(char));
     free(response);
     return error;
@@ -415,9 +405,7 @@ int sendResponse(char type, int success, int descriptor) {
     int error;
     char *response = (char *) malloc(sizeof(char) * 7);
     sprintf(response, "1;%c;%d", type, success);
-    perror(response);
     error = write(descriptor, response, strlen(response) * sizeof(char));
-    perror(response);
     free(response);
     return error;
 }

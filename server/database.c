@@ -443,8 +443,8 @@ int selectUsersByChannelId(ServerStatus *status, int channelId, sqlite3_stmt **s
 int selectChannelsByUserId(ServerStatus *status, int userId, sqlite3_stmt **stmt) {
     int error;
     const char *operationName = "selectChannelsByUserId";
-    const char *sqlStatement = "SELECT c.ID, c.NAME FROM USER_CHANNEL " \
-                               "INNER JOIN CHANNEL C on C.ID = USER_CHANNEL.CHANNEL_ID" \
+    const char *sqlStatement = "SELECT C.ID, C.NAME FROM USER_CHANNEL U " \
+                               "INNER JOIN CHANNEL C on C.ID = U.CHANNEL_ID " \
                                "WHERE USER_ID = ?;";
 
     error = sqlite3_prepare_v2(status->db, sqlStatement, -1, stmt, NULL);
