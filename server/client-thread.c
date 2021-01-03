@@ -253,13 +253,14 @@ int addPost(ServerStatus *status, int descriptor, int size) {
     error = selectUsersByChannelId(status, post.channelId, &stmt);
     while (error == SQLITE_ROW) {
         userId = sqlite3_column_int(stmt, 0);
+        // insert notification
         error = insertNotice(status, userId, post.channelId, post.id);
         if (error != SQLITE_OK) {
             break;
         }
         pthread_mutex_lock(&status->activeUsersMutex);
-        for(int i = 0; i < ACTIVE_USER_LIMIT; i++){
-            if (status->activeUsers[i].id == userId){
+        for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
+            if (status->activeUsers[i].id == userId) {
                 if (descriptor == status->activeUsers[i].descriptor) {
                     break;
                 } else {
@@ -358,6 +359,7 @@ int unsubscribeChannel(ServerStatus *status, int descriptor, int size) {
     }
     return error;
 }
+
 int getPostByChannelId(ServerStatus *status, int descriptor, int size) {
     int error;
 
@@ -385,7 +387,15 @@ int getPostByChannelId(ServerStatus *status, int descriptor, int size) {
         return error;
     }
     sqlite3_finalize(stmt);
-    return 0;
+
+    // delete invalid notifications
+    for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
+        if (descriptor == status->activeUsers[i].descriptor) {
+            error = deleteNotice(status, status->activeUsers[i].id, channelId);
+            break;
+        }
+    }
+    return error;
 }
 
 int sendNotice(int channelId, int descriptor) {
