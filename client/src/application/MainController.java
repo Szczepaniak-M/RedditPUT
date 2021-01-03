@@ -34,11 +34,11 @@ public class MainController implements Initializable {
 	
 	@Override
 	public void initialize(URL arg0, ResourceBundle arg1) {
-		generateChannelButtons(List.of("Kanał o długiej nazwie", "Lubię placki", "Ten ma jednak najdłuższą nazwę", "Halo halo", "Sekcja memów"));
+		generateChannelButtons(communicationContainer);
+		
 	}
 	
-	public void initData(String text, CommunicationThread communicationThread, List<String> communicationContainer) {
-		System.out.println(text);
+	public void initData(CommunicationThread communicationThread, List<String> communicationContainer) {
 		this.communicationThread = communicationThread;
 		this.communicationContainer = communicationContainer;
 	}
@@ -116,26 +116,5 @@ public class MainController implements Initializable {
 		int index = items.size();
 		listViewMessages.setItems(items);
 		listViewMessages.scrollTo(index);
-//		for(Map.Entry<String, String> entry : messages.entrySet()) {
-//			Label authorLbl = new Label(entry.getKey());
-//			authorLbl.setLayoutX(positionX);
-//			authorLbl.setLayoutY(startY + shiftY);
-//			authorLbl.setPrefWidth(width);
-//			authorLbl.setPrefHeight(heightAuthor);
-//			authorLbl.setStyle("-fx-background-color: white; -fx-border-color: purple");
-//			
-//			Label messageLbl = new Label(entry.getValue());
-//			messageLbl.setLayoutX(positionX);
-//			messageLbl.setLayoutY(startY + shiftY + heightAuthor);
-//			messageLbl.setPrefWidth(width);
-//			messageLbl.setPrefHeight(heightMessage);			
-//			messageLbl.setWrapText(true);
-//			messageLbl.setStyle("-fx-background-color: white; -fx-border-color: orange");
-//			
-//			rootPane.getChildren().add(authorLbl);
-//			rootPane.getChildren().add(messageLbl);
-//			
-//			shiftY += heightAuthor + heightMessage + 15;
-//		}
 	}
 }
