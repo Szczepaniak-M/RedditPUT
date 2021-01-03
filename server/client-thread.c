@@ -162,6 +162,7 @@ int login(ServerStatus *status, int descriptor, int size) {
         channel.id = sqlite3_column_int(stmt, 0);
         channel.name = (char *) sqlite3_column_text(stmt, 0);
         sendChannel(&channel, descriptor);
+        error = sqlite3_step(stmt);
     }
     if (error != SQLITE_DONE) {
         executeError(status, "selectChannelsByUserId", stmt);
@@ -174,6 +175,7 @@ int login(ServerStatus *status, int descriptor, int size) {
     while (error == SQLITE_ROW) {
         channelId = sqlite3_column_int(stmt, 0);
         sendNotice(channelId, descriptor);
+        error = sqlite3_step(stmt);
     }
     if (error != SQLITE_DONE) {
         executeError(status, "selectNoticesByUserId", stmt);
@@ -213,6 +215,9 @@ int addPost(ServerStatus *status, int descriptor, int size) {
     while (error == SQLITE_ROW) {
         userId = sqlite3_column_int(stmt, 0);
         error = insertNotice(status, userId, post.channelId, post.id);
+        if (error != SQLITE_OK) {
+            break;
+        }
         pthread_mutex_lock(&status->activeUsersMutex);
         for(int i = 0; i < ACTIVE_USER_LIMIT; i++){
             if (status->activeUsers[i].id == userId){
@@ -224,6 +229,7 @@ int addPost(ServerStatus *status, int descriptor, int size) {
             }
         }
         pthread_mutex_unlock(&status->activeUsersMutex);
+        error = sqlite3_step(stmt);
     }
     if (error != SQLITE_DONE) {
         executeError(status, "selectUsersByChannelId", stmt);
@@ -264,7 +270,7 @@ int subscribeChannel(ServerStatus *status, int descriptor, int size) {
         free(content);
         return error;
     }
-    perror(content);
+
     char *savePointer;
     userId = atoi(strtok_r(content, ";", &savePointer));
     channelId = atoi(strtok_r(NULL, ";", &savePointer));
@@ -322,7 +328,6 @@ int getPostByChannelId(ServerStatus *status, int descriptor, int size) {
         post.content = (char *) sqlite3_column_text(stmt, 2);
         sendPost(&post, descriptor);
         error = sqlite3_step(stmt);
-        perror("XD");
     }
     if (error != SQLITE_DONE) {
         executeError(status, "selectPostByChannelId", stmt);
@@ -366,7 +371,6 @@ int sendPost(Post *post, int descriptor) {
     char *response = (char *) malloc(sizeof(char) * (dataSize + dataLength + 3));
     sprintf(response, "%d;8;%d;%s;%s", dataLength, post->id, post->userName, post->content);
     error = write(descriptor, response, strlen(response) * sizeof(char));
-    perror(response);
     free(response);
     return error;
 }
@@ -402,7 +406,6 @@ int sendResponse(char type, int success, int descriptor) {
     char *response = (char *) malloc(sizeof(char) * 7);
     sprintf(response, "1;%c;%d", type, success);
     error = write(descriptor, response, strlen(response) * sizeof(char));
-    perror(response);
     free(response);
     return error;
 }
