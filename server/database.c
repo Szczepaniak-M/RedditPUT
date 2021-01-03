@@ -540,7 +540,7 @@ int selectChannelsByUserId(ServerStatus *status, int userId, sqlite3_stmt **stmt
 
 int selectPostByChannelId(ServerStatus *status, int channelId, sqlite3_stmt **stmt) {
     int error;
-    const char *sqlStatement = "SELECT p.ID, u.ID, u.NAME, p.CHANNEL_ID, p.CONTENT "
+    const char *sqlStatement = "SELECT p.ID, u.NAME, p.CONTENT " \
                                "FROM POST p " \
                                "INNER JOIN USER U on U.ID = p.USER_ID " \
                                "WHERE CHANNEL_ID = ?;";

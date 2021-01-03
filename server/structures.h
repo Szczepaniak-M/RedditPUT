@@ -49,6 +49,7 @@ typedef struct Channel {
 typedef struct Post {
     int id;
     int userId;
+    char* userName;
     int channelId;
     char* content;
 } Post;

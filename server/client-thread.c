@@ -47,6 +47,10 @@ void *clientThread(void *inputData) {
                     error = unsubscribeChannel(status, descriptor, size);
                     clear(&requestType, &charCounter, &delimiterCounter, sizeBuffer);
                     break;
+                case '8': // usuń subksrypcję
+                    error = getPostByChannelId(status, descriptor, size);
+                    clear(&requestType, &charCounter, &delimiterCounter, sizeBuffer);
+                    break;
                 default:
                     break;
             }
@@ -163,6 +167,21 @@ int login(ServerStatus *status, int descriptor, int size) {
     }
 
     sqlite3_stmt *stmt = NULL;
+    Channel channel;
+    error = selectChannelsByUserId(status, user.id, &stmt);
+    while (error == SQLITE_ROW) {
+        channel.id = sqlite3_column_int(stmt, 0);
+        channel.name = (char *) sqlite3_column_text(stmt, 0);
+        sendChannel(&channel, descriptor);
+    }
+    if (error != SQLITE_DONE) {
+        fprintf(stderr, "%s: SQL error during selecting  USER: %s\n",
+                status->programName, sqlite3_errmsg(status->db));
+        sqlite3_finalize(stmt);
+        return error;
+    }
+    sqlite3_finalize(stmt);
+
     int channelId;
     error = selectNoticesByUserId(status, user.id, &stmt);
     while (error == SQLITE_ROW) {
@@ -303,17 +322,64 @@ int unsubscribeChannel(ServerStatus *status, int descriptor, int size) {
 
     return error;
 }
+int getPostByChannelId(ServerStatus *status, int descriptor, int size) {
+    int error;
+    char *content = readContent(descriptor, size, &error);
+    if (error == -1) {
+        free(content);
+        return error;
+    }
+    int channelId = atoi(content);
+    sqlite3_stmt *stmt = NULL;
+    selectPostByChannelId(status, channelId, &stmt);
+    Post post;
+    while (error == SQLITE_ROW) {
+        post.id = sqlite3_column_int(stmt, 0);
+        post.userName = (char *) sqlite3_column_text(stmt, 1);
+        post.content = (char *) sqlite3_column_text(stmt, 2);
+        sendPost(&post, descriptor);
+    }
+    if (error != SQLITE_DONE) {
+        fprintf(stderr, "%s: SQL error during selecting  USER: %s\n",
+                status->programName, sqlite3_errmsg(status->db));
+        sqlite3_finalize(stmt);
+        return error;
+    }
+    sqlite3_finalize(stmt);
+    return 0;
+}
 
 int sendNotice(int channelId, int descriptor) {
     int error;
-    int channelCopy = channelId;
-    int counter = 0;
-    while (channelCopy > 0) {
-        channelCopy /= 10;
-        counter++;
-    }
-    char *response = (char *) malloc(sizeof(char) * (counter + 5));
-    sprintf(response, "1;6;%d", channelId);
+    int channelIdSize = intLength(channelId);
+    int dataSize = intLength(channelIdSize);
+    char *response = (char *) malloc(sizeof(char) * (dataSize + channelIdSize + 4));
+    sprintf(response, "%d;6;%d", dataSize, channelId);
+    error = write(descriptor, response, strlen(response) * sizeof(char));
+    free(response);
+    return error;
+}
+
+int sendChannel(Channel *channel, int descriptor) {
+    int error;
+    int channelIdSize = intLength(channel->id);
+    int channelNameSize = strlen(channel->name);
+    int dataSize = intLength(channelIdSize + channelNameSize + 1);
+    char *response = (char *) malloc(sizeof(char) * (dataSize + channelIdSize + channelNameSize + 5));
+    sprintf(response, "%d;7;%d;%s", dataSize, channel->id, channel->name);
+    error = write(descriptor, response, strlen(response) * sizeof(char));
+    free(response);
+    return error;
+}
+
+int sendPost(Post *post, int descriptor) {
+    int error;
+    int postIdSize = intLength(post->id);
+    int userNameSize = strlen(post->userName);
+    int contentSize = strlen(post->content);
+    int dataSize = intLength(postIdSize + userNameSize + contentSize + 2);
+    char *response = (char *) malloc(sizeof(char) * (dataSize + postIdSize + userNameSize + contentSize + 6));
+    sprintf(response, "%d;8;%d;%s;%s", dataSize, post->id, post->userName, post->content);
     error = write(descriptor, response, strlen(response) * sizeof(char));
     free(response);
     return error;
@@ -352,4 +418,13 @@ int sendResponse(char type, int success, int descriptor) {
     error = write(descriptor, response, strlen(response) * sizeof(char));
     free(response);
     return error;
+}
+
+int intLength(int n) {
+    int counter = 0;
+    while (n > 0) {
+        n /= 10;
+        counter++;
+    }
+    return counter;
 }
