@@ -97,7 +97,7 @@ int signUp(ServerStatus *status, int descriptor, int size) {
     user.name = name;
     // encrypt password
     pthread_mutex_lock(&status->cryptMutex);
-    char *password = crypt(user.password, "PP");
+    char *password = crypt(user.password, "$6$pt4wu5ns");
     user.password = (char *) malloc(sizeof(char) * (strlen(password) + 1));
     strcpy(user.password, password);
     pthread_mutex_unlock(&status->cryptMutex);
@@ -144,7 +144,7 @@ int login(ServerStatus *status, int descriptor, int size) {
 
     // encrypt password
     pthread_mutex_lock(&status->cryptMutex);
-    char *cryptPassword = crypt(password, "PP");
+    char *cryptPassword = crypt(password, "$6$pt4wu5ns");
     error = strcmp(user.password, cryptPassword);
     pthread_mutex_unlock(&status->cryptMutex);
 
