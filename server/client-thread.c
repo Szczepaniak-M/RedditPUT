@@ -24,25 +24,25 @@ void *clientThread(void *inputData) {
             requestType = readChar;
         } else if (delimiterCounter == 1 && readChar == ';') {
             switch (requestType) {
-                case '0': // rejestracja
+                case '0': // registration
                     error = signUp(status, descriptor, size);
                     break;
-                case '1': // logowanie
+                case '1': // login
                     error = login(status, descriptor, size);
                     break;
-                case '2': // dodaj post
+                case '2': // add post
                     error = addPost(status, descriptor, size);
                     break;
-                case '3': // dodaj kanał
+                case '3': // add channel
                     error = addChannel(status, descriptor, size);
                     break;
-                case '4': // zasubskrybuj kanał
+                case '4': // subscribe channel
                     error = subscribeChannel(status, descriptor, size);
                     break;
-                case '5': // usuń subksrypcję
+                case '5': // delete subscription
                     error = unsubscribeChannel(status, descriptor, size);
                     break;
-                case '8': // usuń subksrypcję
+                case '8': // show post in channel
                     error = getPostByChannelId(status, descriptor, size);
                     break;
                 default:
@@ -51,8 +51,6 @@ void *clientThread(void *inputData) {
             clear(&requestType, &charCounter, &delimiterCounter, sizeBuffer);
         }
         if (error != 0) {
-            fprintf(stderr, "%d\n",
-                    error);
             break;
         }
     }
@@ -63,6 +61,7 @@ void *clientThread(void *inputData) {
             status->activeUsers[i].descriptor = -1;
             if (status->isCleaning == 0) {
                 status->pthreads[i].isInitialized = 0;
+                pthread_detach(pthread_self());
             }
         }
     }
@@ -76,6 +75,7 @@ int signUp(ServerStatus *status, int descriptor, int size) {
     int error;
     User user;
 
+    // transform data
     char *content = readContent(descriptor, size, &error);
     if (error == -1) {
         free(content);
@@ -95,6 +95,7 @@ int signUp(ServerStatus *status, int descriptor, int size) {
         return error;
     }
     user.name = name;
+
     // encrypt password
     pthread_mutex_lock(&status->cryptMutex);
     char *password = crypt(user.password, "$6$pt4wu5ns");
@@ -104,8 +105,19 @@ int signUp(ServerStatus *status, int descriptor, int size) {
 
     // insert user
     error = insertUser(status, &user);
+    if (error != 0) {
+        sendResponse('0', 1, descriptor);
+        free(content);
+        return error;
+    }
+
     // get user id
     error = selectUserByName(status, &user);
+    if (error != 0) {
+        sendResponse('0', 1, descriptor);
+        free(content);
+        return error;
+    }
     free(user.password);
     free(user.name);
     free(content);
@@ -114,6 +126,8 @@ int signUp(ServerStatus *status, int descriptor, int size) {
             status->activeUsers[i].id = user.id;
         }
     }
+
+    // send confirmation
     if (error == 0) {
         sendResponse('0', 0, descriptor);
     } else {
@@ -126,15 +140,17 @@ int login(ServerStatus *status, int descriptor, int size) {
     User user;
     int error;
 
+    // transform data
     char *content = readContent(descriptor, size, &error);
     if (error == -1) {
         free(content);
         return error;
     }
-
     char *savePointer;
     user.name = strtok_r(content, ";", &savePointer);
     char *password = strtok_r(NULL, ";", &savePointer);
+
+    // check if login exists in database
     error = selectUserByName(status, &user);
     if (user.name == NULL) {
         sendResponse('0', 1, descriptor);
@@ -152,20 +168,22 @@ int login(ServerStatus *status, int descriptor, int size) {
     free(user.password);
     free(content);
 
-    if (error != 0) {
+    // send confirmation if password is correct
+    if (error != 0) { // wrong password
         sendResponse('1', 1, descriptor);
         return 0;
     } else {
         sendResponse('1', 0, descriptor);
     }
 
-
+    // add user to active user list
     for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
         if (status->activeUsers[i].descriptor == descriptor) {
             status->activeUsers[i].id = user.id;
         }
     }
 
+    // send list of subscribed channels
     sqlite3_stmt *stmt = NULL;
     Channel channel;
     error = selectChannelsByUserId(status, user.id, &stmt);
@@ -181,6 +199,7 @@ int login(ServerStatus *status, int descriptor, int size) {
     }
     sqlite3_finalize(stmt);
 
+    // send all notifications
     int channelId;
     error = selectNoticesByUserId(status, user.id, &stmt);
     while (error == SQLITE_ROW) {
@@ -201,28 +220,36 @@ int addPost(ServerStatus *status, int descriptor, int size) {
     Post post;
     int error;
 
+    // transform data
     char *content = readContent(descriptor, size, &error);
     if (error == -1) {
         free(content);
         return error;
     }
-
     char *savePointer;
     post.userId = atoi(strtok_r(content, ";", &savePointer));
     post.channelId = atoi(strtok_r(NULL, ";", &savePointer));
     post.content = strtok_r(NULL, ";", &savePointer);
 
+    // insert data
     error = insertPost(status, &post);
     free(content);
+
+    // send confirmation
     if (error == 0) {
         sendResponse('2', 0, descriptor);
     } else {
         sendResponse('2', 1, descriptor);
+        return error;
     }
 
+    // send notification to other users
     sqlite3_stmt *stmt = NULL;
     int userId;
     error = selectNewPostIdByUserId(status, post.userId, &post.id);
+    if (error != 0) {
+        return error;
+    }
     error = selectUsersByChannelId(status, post.channelId, &stmt);
     while (error == SQLITE_ROW) {
         userId = sqlite3_column_int(stmt, 0);
@@ -255,21 +282,25 @@ int addChannel(ServerStatus *status, int descriptor, int size) {
     Channel channel;
     int error;
 
+    // transform data
     char *content = readContent(descriptor, size, &error);
     if (error == -1) {
         free(content);
         return error;
     }
-
     channel.name = content;
+
+    // insert data
     error = insertChannel(status, &channel);
     free(content);
+
+    // send confirmation
     if (error == 0) {
         sendResponse('3', 0, descriptor);
     } else {
         sendResponse('3', 1, descriptor);
     }
-    return 0;
+    return error;
 }
 
 int subscribeChannel(ServerStatus *status, int descriptor, int size) {
@@ -277,25 +308,27 @@ int subscribeChannel(ServerStatus *status, int descriptor, int size) {
     int channelId;
     int error;
 
+    // transform data
     char *content = readContent(descriptor, size, &error);
     if (error == -1) {
         free(content);
         return error;
     }
-
     char *savePointer;
     userId = atoi(strtok_r(content, ";", &savePointer));
     channelId = atoi(strtok_r(NULL, ";", &savePointer));
+
+    // insert data
     error = insertSubscription(status, userId, channelId);
     free(content);
 
+    // send confirmation
     if (error == 0) {
         sendResponse('4', 0, descriptor);
     } else {
         sendResponse('4', 1, descriptor);
     }
-    return 0;
-
+    return error;
 }
 
 int unsubscribeChannel(ServerStatus *status, int descriptor, int size) {
@@ -303,34 +336,40 @@ int unsubscribeChannel(ServerStatus *status, int descriptor, int size) {
     int channelId;
     int error;
 
+    // transform data
     char *content = readContent(descriptor, size, &error);
     if (error == -1) {
         free(content);
         return error;
     }
-
     char *savePointer;
     userId = atoi(strtok_r(content, ";", &savePointer));
     channelId = atoi(strtok_r(NULL, ";", &savePointer));
+
+    // delete data
     error = deleteSubscription(status, userId, channelId);
     free(content);
 
+    // send confirmation
     if (error == 0) {
         sendResponse('5', 0, descriptor);
     } else {
         sendResponse('5', 1, descriptor);
     }
-
-    return 0;
+    return error;
 }
 int getPostByChannelId(ServerStatus *status, int descriptor, int size) {
     int error;
+
+    // transform data
     char *content = readContent(descriptor, size, &error);
     if (error == -1) {
         free(content);
         return error;
     }
     int channelId = atoi(content);
+
+    // get and send data
     Post post;
     sqlite3_stmt *stmt = NULL;
     error = selectPostByChannelId(status, channelId, &stmt);
@@ -387,6 +426,15 @@ int sendPost(Post *post, int descriptor) {
     return error;
 }
 
+int sendResponse(char type, int fail, int descriptor) {
+    int error;
+    char *response = (char *) malloc(sizeof(char) * 7);
+    sprintf(response, "1;%c;%d", type, fail);
+    error = write(descriptor, response, strlen(response) * sizeof(char));
+    free(response);
+    return error;
+}
+
 char *readContent(int descriptor, int size, int *error) {
     char *content = (char *) malloc(sizeof(char) * size);
     char textBuffer[101];
@@ -411,15 +459,6 @@ void clear(char *requestType, int *charCounter, int *delimiterCounter, char *siz
     *charCounter = 0;
     *delimiterCounter = 0;
     memset(sizeBuffer, 0, 15);
-}
-
-int sendResponse(char type, int success, int descriptor) {
-    int error;
-    char *response = (char *) malloc(sizeof(char) * 7);
-    sprintf(response, "1;%c;%d", type, success);
-    error = write(descriptor, response, strlen(response) * sizeof(char));
-    free(response);
-    return error;
 }
 
 int intLength(int n) {

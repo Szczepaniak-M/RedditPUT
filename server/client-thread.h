@@ -36,7 +36,7 @@ char* readContent(int descriptor, int size, int *error);
 
 void clear(char *requestType, int *charCounter, int *delimiterCounter, char *sizeBuffer);
 
-int sendResponse(char type, int success, int descriptor);
+int sendResponse(char type, int fail, int descriptor);
 
 int intLength(int n);
 
