@@ -3,9 +3,7 @@ package application;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.ResourceBundle;
 
 import javafx.collections.FXCollections;
@@ -31,13 +29,18 @@ public class MainController implements Initializable {
 	@FXML
 	private ListView<String> listViewMessages;
 	
+	private List<String> communicationContainer;
+	private CommunicationThread communicationThread;
+	
 	@Override
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		generateChannelButtons(List.of("Kanał o długiej nazwie", "Lubię placki", "Ten ma jednak najdłuższą nazwę", "Halo halo", "Sekcja memów"));
 	}
 	
-	public void initData(String text) {
+	public void initData(String text, CommunicationThread communicationThread, List<String> communicationContainer) {
 		System.out.println(text);
+		this.communicationThread = communicationThread;
+		this.communicationContainer = communicationContainer;
 	}
 	
 	@FXML

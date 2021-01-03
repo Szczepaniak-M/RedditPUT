@@ -1,14 +1,11 @@
 package application;
 
 import java.io.IOException;
-import java.io.OutputStream;
-import java.net.ConnectException;
-import java.net.Socket;
 import java.net.URL;
-import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.ResourceBundle;
 
-import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
@@ -30,32 +27,55 @@ public class LoginController implements Initializable {
 	@FXML
     private TextField tfPort;
     
+	private List<String> communicationContainer = new ArrayList<>();
+	private Type type;
+	
+	private CommunicationThread communicationThread;
+	
 	@Override
-	public void initialize(URL arg0, ResourceBundle arg1) {
-		// TODO Auto-generated method stub	
-	}
+	public void initialize(URL arg0, ResourceBundle arg1) {}
 	
 	@FXML
     public void loginBtnOnClickListener() throws IOException {
     	System.out.println("User " + tfLogin.getText() + " server address " + tfServerAddress.getText() + " port " + tfPort.getText());
-    	
-    	CommunicationThread communicationThread = new CommunicationThread(
+    	type = Type.REGISTRATION;
+    	communicationContainer.add("false");
+    	Thread currentThread = Thread.currentThread();
+    	communicationThread = new CommunicationThread(
     			tfLogin.getText(),
     			tfPassword.getText(),
     			tfServerAddress.getText(),
-    			Integer.valueOf(tfPort.getText()));
-    	
-    	Thread ct = Thread.currentThread();
+    			Integer.valueOf(tfPort.getText()),
+    			currentThread,
+    			communicationContainer,
+    			type);
+    	    	
     	Thread t = new Thread(communicationThread);
     	t.setName("Communication Thread");
     	t.start();
+    	try {
+    		synchronized (currentThread) {
+    			currentThread.wait(2000);
+    			if(communicationContainer.get(0).equals("true")) {
+    				redirectToMainScene();
+    			} else {
+    				if(type.equals(Type.LOGIN)) {
+    					System.out.println("Incorrect password");
+    				} else {
+    					System.out.println("Account duplicated");
+    				}
+    			}
+			}			
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
     }
 		
 	public void redirectToMainScene() throws IOException {
 		//pass references to another controller
     	MainController mainController = new MainController();
     	FXMLLoader loader = new FXMLLoader(getClass().getResource("MainWindow.fxml"));    	 
-    	mainController.initData("Text from login controller");
+    	mainController.initData("Text from login controller", communicationThread, communicationContainer);
     	loader.setController(mainController);
     	//load main scene
     	Pane pane = loader.load();
