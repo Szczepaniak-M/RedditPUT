@@ -40,5 +40,13 @@ int selectChannelsByUserId(ServerStatus *status, int userId, sqlite3_stmt **stmt
 
 int selectPostByChannelId(ServerStatus *status, int channelId, sqlite3_stmt **stmt);
 
+void prepareError(ServerStatus *status, const char *operationName, sqlite3_stmt *stmt);
+
+void bindIntError(ServerStatus *status, char *parameterName, int value, const char *operationName, sqlite3_stmt *stmt);
+
+void bindTextError(ServerStatus *status, char *parameterName, char *value, const char *operationName, sqlite3_stmt *stmt);
+
+void executeError(ServerStatus *status, const char *operationName, sqlite3_stmt *stmt);
+
 
 #endif
