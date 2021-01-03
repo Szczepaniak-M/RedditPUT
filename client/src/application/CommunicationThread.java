@@ -36,16 +36,18 @@ public class CommunicationThread implements Runnable {
     		OutputStream output = clientSocket.getOutputStream();
     		InputStream input = clientSocket.getInputStream();
     		BufferedReader reader = new BufferedReader(new InputStreamReader(input));
-    		firstRequest(output, reader);
-    		Thread ct = Thread.currentThread();
-//    		while(true) {
-//    			synchronized (ct) {
-//    				ct.wait(4000);
-//				}    			
-//    			System.out.println(readMessagesFromServer(reader));
-//    			System.out.println("----------------------------");
-//    		}
-    		
+    		if(firstRequest(output, reader)) {
+//	    		Thread ct = Thread.currentThread();
+//	    		while(true) {
+//	    			synchronized (ct) {
+//	    				ct.wait(4000);
+//					}    			
+//	    			System.out.println(readMessagesFromServer(reader));
+//	    			System.out.println("----------------------------");
+//	    		}
+    			System.out.println("LoggedIn");
+    		}
+    		System.out.println("End of CommunicationThread");
     	} catch (IOException ex) {
             System.out.println("Server not found: " + ex.getMessage());
 //    	} catch (InterruptedException ex) {
@@ -57,10 +59,14 @@ public class CommunicationThread implements Runnable {
 	}	
 	
 	public int readMessagesFromServer(BufferedReader reader) throws IOException {
-		return reader.read();
-	}
+		if(reader.ready())
+			return reader.read();
+		else
+			return -2;
+	}		
 	
-	public void firstRequest(OutputStream output, BufferedReader reader) throws IOException {
+	public boolean firstRequest(OutputStream output, BufferedReader reader) throws IOException {
+		boolean accepted = false;
 		int loginLength = login.length();
 		int passwordLength = password.length();
 		int totalLength = loginLength + passwordLength + 1;
@@ -73,19 +79,23 @@ public class CommunicationThread implements Runnable {
 		}
 		requestBuilder.append(login);
 		requestBuilder.append(";");
-		requestBuilder.append("password");
+		requestBuilder.append(password);
 		
 		String request = requestBuilder.toString();
+		System.err.println(request);
 		output.write(request.getBytes());		
 		reader.read(buffor);
 		String response = String.valueOf(buffor);
+		System.err.println("Response " + response);
 		if(response.charAt(4) == '0') {
 			communicationContainer.remove(0);
 			communicationContainer.add("true");
+			accepted = true;
 		}
 		synchronized (loginControllerThread) {
 			loginControllerThread.notify();
 		}
+		return accepted;
 	}
 
 }

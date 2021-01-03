@@ -19,6 +19,8 @@ public class LoginController implements Initializable {
 	@FXML
     private Button btnLogIn;
 	@FXML
+    private Button btnSignUp;
+	@FXML
     private TextField tfLogin;
 	@FXML
     private TextField tfPassword;
@@ -37,7 +39,39 @@ public class LoginController implements Initializable {
 	
 	@FXML
     public void loginBtnOnClickListener() throws IOException {
-    	System.out.println("User " + tfLogin.getText() + " server address " + tfServerAddress.getText() + " port " + tfPort.getText());
+    	System.out.println("Log In User " + tfLogin.getText() + " server address " + tfServerAddress.getText() + " port " + tfPort.getText());
+    	type = Type.LOGIN;
+    	communicationContainer.add("false");
+    	Thread currentThread = Thread.currentThread();
+    	communicationThread = new CommunicationThread(
+    			tfLogin.getText(),
+    			tfPassword.getText(),
+    			tfServerAddress.getText(),
+    			Integer.valueOf(tfPort.getText()),
+    			currentThread,
+    			communicationContainer,
+    			type);
+    	    	
+    	Thread t = new Thread(communicationThread);
+    	t.setName("Communication Thread");
+    	t.start();
+    	try {
+    		synchronized (currentThread) {
+    			currentThread.wait(1000000);
+    			if(communicationContainer.get(0).equals("true")) {
+    				redirectToMainScene();
+    			} else {
+    				System.out.println("Incorrect password");
+    			}
+			}			
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+    }
+	
+	@FXML
+	public void signUpBtnOnClickListner() throws IOException {
+		System.out.println("Sign Up User " + tfLogin.getText() + " server address " + tfServerAddress.getText() + " port " + tfPort.getText());
     	type = Type.REGISTRATION;
     	communicationContainer.add("false");
     	Thread currentThread = Thread.currentThread();
@@ -55,28 +89,25 @@ public class LoginController implements Initializable {
     	t.start();
     	try {
     		synchronized (currentThread) {
-    			currentThread.wait(2000);
+    			currentThread.wait(100000);
     			if(communicationContainer.get(0).equals("true")) {
     				redirectToMainScene();
     			} else {
-    				if(type.equals(Type.LOGIN)) {
-    					System.out.println("Incorrect password");
-    				} else {
-    					System.out.println("Account duplicated");
-    				}
+    				System.out.println("Account duplicated");    				
     			}
 			}			
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-    }
-		
+	}
+	
 	public void redirectToMainScene() throws IOException {
 		//pass references to another controller
     	MainController mainController = new MainController();
     	FXMLLoader loader = new FXMLLoader(getClass().getResource("MainWindow.fxml"));    	 
     	mainController.initData("Text from login controller", communicationThread, communicationContainer);
     	loader.setController(mainController);
+    	
     	//load main scene
     	Pane pane = loader.load();
     	rootPane.getChildren().setAll(pane);
