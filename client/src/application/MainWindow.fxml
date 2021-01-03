@@ -6,13 +6,13 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.Pane?>
 
-<Pane fx:id="rootPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="680.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="application.MainController">
+<Pane fx:id="rootPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="680.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1">
    <Button fx:id="btnLogOut" layoutX="710.0" layoutY="10.0" onAction="#logoutBtnOnClickListener" prefHeight="30.0" prefWidth="80.0" text="Log Out" />
    <TextField fx:id="tfMessage" layoutX="250.0" layoutY="30.0" prefHeight="42.0" prefWidth="405.0" promptText="Message" />
    <Button fx:id="btnSend" layoutX="575.0" layoutY="80.0" mnemonicParsing="false" prefHeight="30.0" prefWidth="77.0" text="Send" />
    <Button fx:id="btnLoadMsgs" layoutX="378.0" layoutY="185.0" mnemonicParsing="false" prefHeight="30.0" prefWidth="150.0" text="Load new messages" />
    <Label fx:id="lblCanals" layoutX="50.0" layoutY="100.0" prefHeight="30.0" prefWidth="110.0" style="-fx-background-color: white; -fx-border-color: blue;" text="Channels" textAlignment="CENTER" />
-   <Button fx:id="btnAddCanal" layoutX="50.0" layoutY="140.0" mnemonicParsing="false" prefHeight="30.0" prefWidth="110.0" text="Add Channel +" />
+   <Button fx:id="btnAddChannel" layoutX="50.0" layoutY="140.0" mnemonicParsing="false" prefHeight="30.0" prefWidth="130.0" text="Add Channel +" />
    <Label fx:id="currentChannel" layoutX="250.0" layoutY="125.0" prefHeight="42.0" prefWidth="405.0" style="-fx-background-color: white; -fx-border-color: red;" text="Current channel: " wrapText="true" />
    <ListView fx:id="listViewMessages" layoutX="250.0" layoutY="250.0" prefHeight="400.0" prefWidth="405.0" />   
 </Pane>

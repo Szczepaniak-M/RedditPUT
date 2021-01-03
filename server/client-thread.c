@@ -415,7 +415,9 @@ int sendResponse(char type, int success, int descriptor) {
     int error;
     char *response = (char *) malloc(sizeof(char) * 7);
     sprintf(response, "1;%c;%d", type, success);
+    perror(response);
     error = write(descriptor, response, strlen(response) * sizeof(char));
+    perror(response);
     free(response);
     return error;
 }

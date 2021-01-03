@@ -36,6 +36,10 @@ public class MainController implements Initializable {
 		generateChannelButtons(List.of("Kanał o długiej nazwie", "Lubię placki", "Ten ma jednak najdłuższą nazwę", "Halo halo", "Sekcja memów"));
 	}
 	
+	public void initData(String text) {
+		System.out.println(text);
+	}
+	
 	@FXML
 	public void logoutBtnOnClickListener() throws IOException {
 		System.out.println("Log Out");
@@ -50,7 +54,7 @@ public class MainController implements Initializable {
 		int shiftY = 0;
 		int positionX = 50;
 		int height = 30;
-		int width = 110;
+		int width = 130;
 		for(String s : channels) {
 			Button b = new Button(s);
 			b.setLayoutX(positionX);
