@@ -10,6 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javafx.collections.ObservableList;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 
 public class CommunicationThread implements Runnable {
 	
@@ -62,6 +64,9 @@ public class CommunicationThread implements Runnable {
 		    				case "2":	    					
 		    					sendPost(request, output, reader);
 		    					break;
+		    				case "3":
+		    					addChannel(request, output, reader);
+		    					break;
 		    				case "5":
 		    					unsubscribeChannel(request, output, reader);
 		    					break;	
@@ -107,8 +112,6 @@ public class CommunicationThread implements Runnable {
     		System.out.println("End of CommunicationThread");
     	} catch (IOException ex) {
             System.out.println("Server not found: " + ex.getMessage());
-//    	} catch (InterruptedException ex) {
-//    		System.out.println("Thread interrupted");
 		} catch (Exception ex) {
     		ex.printStackTrace();
 			System.out.println("Unknown exception");
@@ -189,7 +192,6 @@ public class CommunicationThread implements Runnable {
 						response += String.valueOf(buffor, 0, length);
 					}					
 					channels.add(new Channel(response));
-//					communicationContainer.add(response);
 					break;
 			}
 		}
@@ -282,6 +284,24 @@ public class CommunicationThread implements Runnable {
 			reader.read(buffor, 0, 5);	
 			System.err.println(String.valueOf(buffor));
 		}
+	}
+	
+	private void addChannel(String request, OutputStream output, BufferedReader reader) throws IOException, InterruptedException {
+		output.write(request.getBytes());
+		int counter = 0;
+		while(!reader.ready() && counter < 20) {
+			Thread.currentThread().sleep(100);
+			counter++;
+		}
+		reader.read(buffor, 0, 5);
+		System.err.println(buffor);
+		if(buffor[4] == '1') {
+			
+		}
+	}
+	
+	private void requestForChannels(String request, OutputStream output, BufferedReader reader) throws IOException, InterruptedException {
+		
 	}
 	
 	public void setObservables(ObservableList<String> posts, ObservableList<String> numberOfNewMsgs) {

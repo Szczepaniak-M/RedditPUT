@@ -22,6 +22,7 @@ import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.layout.Pane;
 
 public class MainController implements Initializable {
@@ -75,6 +76,24 @@ public class MainController implements Initializable {
 		this.communicationThread = communicationThread;
 		this.communicationContainer = communicationContainer;
 		communicationThread.setObservables(posts, numberOfNewMsgs);		        
+	}
+	
+	@FXML
+	public void btnAddChannelClickListener() {
+		Dialog dialog = new TextInputDialog();
+		dialog.setTitle("Add channel");
+		dialog.setHeaderText("Enter channel name");
+
+		Optional<String> result = dialog.showAndWait();
+		if (result.isPresent()) {		
+			System.out.println(result.get());
+			if(!result.get().equals("")) {
+			    String request = result.get().length() + ";3;" + result.get();
+			    synchronized (communicationContainer) {
+			    	communicationContainer.add(request);
+				}
+			}
+		}
 	}
 	
 	@FXML
