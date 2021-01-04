@@ -228,7 +228,7 @@ int addPost(ServerStatus *status, int descriptor, int size, int index) {
     }
     char *savePointer;
     post.userId = status->activeUsers[index].id;
-    post.channelId = atoi(strtok_r(NULL, ";", &savePointer));
+    post.channelId = atoi(strtok_r(content, ";", &savePointer));
     post.content = strtok_r(NULL, ";", &savePointer);
 
     // insert data
