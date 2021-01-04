@@ -7,19 +7,21 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+
+import javafx.collections.ObservableList;
 
 public class CommunicationThread implements Runnable {
 	
 	private String login, password, host;
 	private int port;
 	private char[] buffor = new char[1000];
-	private Thread loginControllerThread;
+	private Thread applicationThread;
 	private List<String> loginContainer;
 	private List<String> communicationContainer;
 	private Type type;
-	private List<Channel> subscribedChannels = Collections.synchronizedList(new ArrayList<>());
+	private ObservableList<String> posts;
+	private List<Channel> channels = new ArrayList<>();
 	
 	public CommunicationThread() {}
 	
@@ -28,7 +30,7 @@ public class CommunicationThread implements Runnable {
 		this.password = password;
 		this.host = host;
 		this.port = port;
-		this.loginControllerThread = loginControllerThread;
+		this.applicationThread = loginControllerThread;
 		this.loginContainer = success;
 		this.type = type;
 		this.communicationContainer = communicationContainer;
@@ -43,14 +45,34 @@ public class CommunicationThread implements Runnable {
     		BufferedReader reader = new BufferedReader(new InputStreamReader(input));
     		if(firstRequest(output, reader)) {
     			System.out.println("LoggedIn");    			
-//	    		Thread ct = Thread.currentThread();
-//	    		while(true) {
-//	    			synchronized (ct) {
-//	    				ct.wait(4000);
-//					}    			
-//	    			System.out.println(readMessagesFromServer(reader));
-//	    			System.out.println("----------------------------");
-//	    		}    			
+	    		Thread ct = Thread.currentThread();
+	    		mainLoop: while(true) {
+	    			synchronized (ct) {
+	    				ct.wait(2000);
+					}    			
+	    			while(!communicationContainer.isEmpty()) {
+	    				String request = communicationContainer.get(0);
+	    				String type = (request.split(";")[1]).substring(0, 1);
+	    				System.out.println("Type: " + type);
+	    				communicationContainer.remove(0);
+	    				switch (type) {
+	    				case "2":
+	    					sendPost(request, output, reader);
+	    					break;
+						case "8":
+							requestForPosts(request, output, reader);
+							break;
+						case "l":
+							break mainLoop;
+						default:
+							break;
+						}
+	    			}
+	    			if(reader.ready()) {
+	    				int length = reader.read(buffor);
+	    				String response = String.valueOf(buffor).substring(0, length);
+	    			}
+	    		}    			
     		}
     		System.out.println("End of CommunicationThread");
     	} catch (IOException ex) {
@@ -63,14 +85,14 @@ public class CommunicationThread implements Runnable {
 		}
 	}	
 	
-	public int readMessagesFromServer(BufferedReader reader) throws IOException {
+	private int readMessagesFromServer(BufferedReader reader) throws IOException {
 		if(reader.ready())
 			return reader.read();
 		else
 			return -2;
 	}		
 	
-	public boolean firstRequest(OutputStream output, BufferedReader reader) throws IOException {
+	private boolean firstRequest(OutputStream output, BufferedReader reader) throws IOException {
 		boolean accepted = false;
 		int loginLength = login.length();
 		int passwordLength = password.length();
@@ -87,44 +109,135 @@ public class CommunicationThread implements Runnable {
 		requestBuilder.append(password);
 		
 		String request = requestBuilder.toString();
+		System.out.println(request);
 		output.write(request.getBytes());		
 		reader.read(buffor, 0, 5);
 		String response = String.valueOf(buffor);
 		if(response.charAt(4) == '0') {
 			loginContainer.remove(0);
 			loginContainer.add("true");
-			getUserChannels(reader);
+			readFirstResponse(reader);
 			accepted = true;
 		}
-		synchronized (loginControllerThread) {
-			loginControllerThread.notify();
+		synchronized (applicationThread) {
+			applicationThread.notify();
 		}
 		return accepted;
 	}
 
-	private void getUserChannels(BufferedReader reader) throws IOException {
+	private void readFirstResponse(BufferedReader reader) throws IOException {
+		channels.clear();
+		String type;
+		while(!reader.ready()) {}
 		while(reader.ready()) {
 			reader.read(buffor, 0, 2);
 			int length = 0;
 			if(buffor[1] == ';') {
 				length = Integer.valueOf(String.valueOf(buffor[0]));
-				reader.read(buffor, 0, 2);
+				reader.read(buffor, 0, 1);
+				type = String.valueOf(buffor[0]);
 			} else {
 				length = Integer.valueOf(String.valueOf(buffor[0])) * 10 + Integer.valueOf(String.valueOf(buffor[1]));
-				reader.read(buffor, 0, 3);
+				reader.read(buffor, 0, 2);
+				type = String.valueOf(buffor[1]);
 			}
-			reader.read(buffor, 0, length);
-			String response = String.valueOf(buffor, 0, length);
-			while(response.length() != length) {
-				reader.read(buffor, 0, length - response.length());
-				response += String.valueOf(buffor, 0, length);
+			reader.read(buffor, 0, 1); //skip semi-colon
+			switch(type) {
+				case "6":
+					reader.read(buffor, 0, 1);				
+					System.out.println("Notification for channel: " + String.valueOf(buffor[0]));
+					break;
+				case "7":
+					reader.read(buffor, 0, length);
+					String response = String.valueOf(buffor, 0, length);
+					while(response.length() != length) {
+						reader.read(buffor, 0, length - response.length());
+						response += String.valueOf(buffor, 0, length);
+					}
+					System.out.println(response);
+					channels.add(new Channel(response));
+					communicationContainer.add(response);
+					break;
 			}
-			subscribedChannels.add(new Channel(response.split(";")[0], response.split(";")[1]));
-			communicationContainer.add(response.split(";")[1]);
+		}
+	}
+
+	private void sendPost(String post, OutputStream output, BufferedReader reader) throws IOException, InterruptedException {		
+		String msg = post.split(";")[4];
+		if(!msg.isEmpty()) {
+			String channelName = post.split(";")[3];
+			String channelID = "";
+			for(Channel c : channels) {
+				if(c.getName().equals(channelName)) {
+					channelID = c.getId();
+					break;
+				}
+			}
+			int length = msg.length() + channelID.length() + 1;
+			String request = length + ";2;" + channelID + ";" + msg; 
+			output.write(request.getBytes());
+			int counter = 0;
+			System.out.println(request);
+			while(!reader.ready() && counter < 20) {
+				Thread.currentThread().sleep(100);
+				counter++;
+			}
+			if(!reader.ready()) {
+				//TODO resend
+			} else {
+				reader.read(buffor, 0, 5);
+				synchronized (posts) {
+					posts.add(login + " said:");
+					posts.add(msg);
+				}
+			}
 		}
 	}
 	
-	public List<Channel> getSubscribedChannels() {
-		return subscribedChannels;
+	@SuppressWarnings("static-access")
+	private void requestForPosts(String request, OutputStream output, BufferedReader reader) throws IOException, InterruptedException {		
+		output.write(request.getBytes());
+		int counter = 0;
+		while(!reader.ready() && counter < 20) {
+			Thread.currentThread().sleep(100);
+			counter++;
+		}
+		synchronized (posts) {	
+			while(reader.ready()) {
+				reader.read(buffor, 0, 2);
+				int length = 0;
+				if(buffor[1] == ';') {
+					length = Integer.valueOf(String.valueOf(buffor[0]));
+					reader.read(buffor, 0, 2);
+				} else {
+					length = Integer.valueOf(String.valueOf(buffor[0])) * 10 + Integer.valueOf(String.valueOf(buffor[1]));
+					reader.read(buffor, 0, 1);
+					if(buffor[0] == ';') {
+						reader.read(buffor, 0, 2);
+					} else {
+						length *= 10;
+						length += Integer.valueOf(String.valueOf(buffor[0]));
+						reader.read(buffor, 0, 3);
+					}
+				}
+				reader.read(buffor, 0, length);
+				String response = String.valueOf(buffor, 0, length);
+				while(response.length() != length) {
+					reader.read(buffor, 0, length - response.length());
+					response += String.valueOf(buffor, 0, length);
+				}
+				posts.add(response.split(";")[1]+ " said:");
+				posts.add(response.split(";")[2]);
+			}
+			System.out.println("All messages read");
+		}
 	}
+	
+	public void setPosts(ObservableList<String> posts) {
+		this.posts = posts;
+	}
+	
+	public List<String> getPosts() {
+		return posts;
+	}		
 }

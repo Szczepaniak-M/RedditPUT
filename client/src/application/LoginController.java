@@ -13,6 +13,7 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.Pane;
+import javafx.stage.WindowEvent;
 
 public class LoginController implements Initializable {
 	@FXML
@@ -119,5 +120,11 @@ public class LoginController implements Initializable {
     	//load main scene
     	Pane pane = loader.load();
     	rootPane.getChildren().setAll(pane);
+    	rootPane.getScene().getWindow().addEventHandler(javafx.stage.WindowEvent.WINDOW_CLOSE_REQUEST, this::closeWindow);
+	}
+		
+	private void closeWindow(WindowEvent event) {
+		System.out.println("Close application");
+		communicationContainer.add(";logout;");
 	}
 }
