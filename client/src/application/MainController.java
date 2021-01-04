@@ -37,6 +37,8 @@ public class MainController implements Initializable {
 	@FXML
 	private Button btnRemoveChannel;
 	@FXML
+	private Button btnSubscribeChannel;
+	@FXML
 	private Label currentChannel;
 	@FXML
 	private TextField tfMessage;
@@ -47,12 +49,14 @@ public class MainController implements Initializable {
 	private CommunicationThread communicationThread;
 	private ObservableList<String> posts = FXCollections.synchronizedObservableList(FXCollections.observableArrayList(new ArrayList<String>()));
 	private ObservableList<String> numberOfNewMsgs = FXCollections.synchronizedObservableList(FXCollections.observableArrayList(new ArrayList<String>()));
-	private List<Channel> channels;
+	private ObservableList<Channel> channels;
 	private List<Button> buttons = new ArrayList<>();
+	private ObservableList<String> availableChannels;
 	
 	@Override
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		channels = communicationThread.getChannels();
+		availableChannels = communicationThread.getAvailableChannels();
 		generateChannelButtons(channels);
 		communicationContainer.clear();				
 		numberOfNewMsgs.addListener(new ListChangeListener<String>() {
@@ -70,6 +74,81 @@ public class MainController implements Initializable {
 			}
 		});
 		numberOfNewMsgs.add("");
+		channels.addListener(new ListChangeListener<Channel>() {
+			@Override
+			public void onChanged(Change<? extends Channel> change) {
+				while(change.next()) {
+					if(change.wasAdded()) {						
+						Channel c = change.getAddedSubList().get(0);
+						double positionY = buttons.get(buttons.size() - 1).getLayoutY() + 40;
+						int positionX = 50;
+						int height = 30;
+						int width = 130;
+						Button b = new Button();
+						b.setId(c.getName());
+						b.setLayoutX(positionX);
+						b.setLayoutY(positionY);
+						b.setPrefHeight(height);
+						b.setPrefWidth(width);
+						b.setMnemonicParsing(false);
+						b.setText(c.getName() + " | [" + c.getObsList().get(0) + "]");
+						c.getObsList().addListener(new ListChangeListener<Integer>() {
+							@Override
+							public void onChanged(Change<? extends Integer> change) {
+								while(change.next()) {
+									if(change.wasAdded()) {
+										Platform.runLater(() -> {
+											b.setText(c.getName() + " | [" + c.getObsList().get(0) + "]");
+										});										
+									}
+								}
+							}
+						});			
+						b.setOnAction(e -> {
+							currentChannel.setText(c.getName());				
+							String requestForPosts = c.getId().length() + ";8;" + c.getId();
+							posts.clear();
+							synchronized (communicationContainer) {
+								communicationContainer.add(requestForPosts);
+							}					
+							printMessages();
+						});
+						Platform.runLater(() -> {
+							rootPane.getChildren().add(b);
+						});	
+						buttons.add(b);
+					}
+				}
+			}
+		});
+		availableChannels.addListener(new ListChangeListener<String>() {
+			@Override
+			public void onChanged(Change<? extends String> change) {
+				while(change.next()) {
+					if(change.wasAdded()) {
+						List<String> names = new ArrayList<>();
+						availableChannels.forEach(c -> names.add(c.split(";")[1]));
+						if(names.isEmpty())
+							return;
+						Platform.runLater(() -> {
+							Dialog dialog = new ChoiceDialog(names.get(0), names);
+							dialog.setTitle("Subscribe Channel");
+							dialog.setHeaderText("Please choose channel to subscribe");
+
+							Optional<String> result = dialog.showAndWait();				
+							if (result.isPresent()) {
+								int index = names.indexOf(result.get());
+								String channelID = availableChannels.get(index).split(";")[0];
+								String request = channelID.length() + ";4;" + channelID + ";" + result.get();
+								synchronized (communicationContainer) {
+									communicationContainer.add(request);
+								}
+							}
+						});
+					}
+				}
+			}
+		});
 	}
 	
 	public void initData(CommunicationThread communicationThread, List<String> communicationContainer) {
@@ -94,6 +173,13 @@ public class MainController implements Initializable {
 				}
 			}
 		}
+	}
+	
+	@FXML
+	public void btnSubscribeChannelClickListener() {
+		synchronized (communicationContainer) {
+	    	communicationContainer.add("0;9;");
+		}		
 	}
 	
 	@FXML
@@ -169,7 +255,7 @@ public class MainController implements Initializable {
 	}
 	
 	private void generateChannelButtons(List<Channel> channels) {
-		int startY = 220;
+		int startY = 260;
 		int shiftY = 0;
 		int positionX = 50;
 		int height = 30;

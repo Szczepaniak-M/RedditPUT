@@ -15,6 +15,12 @@ public class Channel {
 		obsList.add(numberOfNewMsgs);
 	}
 	
+	public Channel(String id, String name) {
+		this.id = id;
+		this.name = name;
+		obsList.add(numberOfNewMsgs);
+	}
+	
 	public String getId() {
 		return id;
 	}

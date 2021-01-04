@@ -8,7 +8,9 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Observable;
 
+import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
@@ -24,8 +26,9 @@ public class CommunicationThread implements Runnable {
 	private Type typeAction;
 	private ObservableList<String> posts;
 	private ObservableList<String> numberOfNewMsgs;
-	private List<Channel> channels = new ArrayList<>();
+	private ObservableList<Channel> channels = FXCollections.observableArrayList(new ArrayList<>());
 	private String currentChannelID = "";
+	private ObservableList<String> availableChannels = FXCollections.synchronizedObservableList(FXCollections.observableArrayList(new ArrayList<>()));
 	
 	public CommunicationThread() {}
 	
@@ -67,6 +70,9 @@ public class CommunicationThread implements Runnable {
 		    				case "3":
 		    					addChannel(request, output, reader);
 		    					break;
+		    				case "4":
+		    					subscribeChannel(request, output, reader);
+		    					break;	
 		    				case "5":
 		    					unsubscribeChannel(request, output, reader);
 		    					break;	
@@ -74,6 +80,9 @@ public class CommunicationThread implements Runnable {
 								currentChannelID = request.split(";")[2];
 								requestForPosts(request, output, reader);
 								break;
+							case "9":								
+								requestForAvailableChannels(request, output, reader);
+								break;	
 							case "logout":
 								break mainLoop;
 							case "n":
@@ -167,7 +176,7 @@ public class CommunicationThread implements Runnable {
 				reader.read(buffor, 0, 2);
 				type = String.valueOf(buffor[1]);
 			}
-			reader.read(buffor, 0, 1); //skip semi-colon
+			reader.read(buffor, 0, 1); //skip semi-colon			
 			switch(type) {
 				case "6":
 					int i = reader.read(buffor, 0, length);
@@ -178,12 +187,14 @@ public class CommunicationThread implements Runnable {
 						request += String.valueOf(buffor).substring(0, tmp);
 					}
 					System.out.println("Notification for channel: " + String.valueOf(buffor[0]));
-					for(Channel c : channels) {
-    					if(c.getId().equals(request)) {
-    						c.increaseNumberOfMsgs();
-    						break;
-    					}	    					
-    				}
+					synchronized (channels) {
+						for(Channel c : channels) {
+	    					if(c.getId().equals(request)) {
+	    						c.increaseNumberOfMsgs();
+	    						break;
+	    					}	    					
+	    				}
+					}					
 					break;
 				case "7":
 					reader.read(buffor, 0, length);
@@ -193,7 +204,9 @@ public class CommunicationThread implements Runnable {
 						response += String.valueOf(buffor, 0, length);
 					}	
 					if(!response.split(";")[0].equals("0"))
-						channels.add(new Channel(response));
+						synchronized (channels) {
+							channels.add(new Channel(response));
+						}						
 					break;
 			}
 		}
@@ -258,12 +271,14 @@ public class CommunicationThread implements Runnable {
 				posts.add(response.split(";")[1]+ " said:");
 				posts.add(response.split(";")[2]);
 			}	
-			for(Channel c : channels) {
-				if(c.getId().equals(currentChannelID)) {
-					c.clearNumberOfNewMsgs();
-					break;
+			synchronized (channels) {
+				for(Channel c : channels) {
+					if(c.getId().equals(currentChannelID)) {
+						c.clearNumberOfNewMsgs();
+						break;
+					}
 				}
-			}
+			}			
 			synchronized (numberOfNewMsgs) {
 				numberOfNewMsgs.remove(0);
 				numberOfNewMsgs.add("0");
@@ -273,7 +288,6 @@ public class CommunicationThread implements Runnable {
 	}
 	
 	private void unsubscribeChannel(String request, OutputStream output, BufferedReader reader) throws IOException, InterruptedException {
-		System.err.println(request);
 		output.write(request.getBytes());
 		int counter = 0;
 		while(!reader.ready() && counter < 20) {
@@ -284,7 +298,6 @@ public class CommunicationThread implements Runnable {
 			//TODO resend
 		} else {
 			reader.read(buffor, 0, 5);	
-			System.err.println(String.valueOf(buffor));
 		}
 	}
 	
@@ -296,14 +309,93 @@ public class CommunicationThread implements Runnable {
 			counter++;
 		}
 		reader.read(buffor, 0, 5);
-		System.err.println(buffor);
-		if(buffor[4] == '1') {
-			
+		if(buffor[4] == '0') {
+			while(!reader.ready()) {}
+			while(reader.ready()) {
+				reader.read(buffor, 0, 2);
+				int length = 0;
+				if(buffor[1] == ';') {
+					length = Integer.valueOf(String.valueOf(buffor[0]));
+					reader.read(buffor, 0, 1);
+				} else {
+					length = Integer.valueOf(String.valueOf(buffor[0])) * 10 + Integer.valueOf(String.valueOf(buffor[1]));
+					reader.read(buffor, 0, 2);
+				}
+				reader.read(buffor, 0, 1); //skip semi-colon
+				reader.read(buffor, 0, length);
+				String response = String.valueOf(buffor, 0, length);
+				while(response.length() != length) {
+					reader.read(buffor, 0, length - response.length());
+					response += String.valueOf(buffor, 0, length);
+				}
+				synchronized (channels) {
+					channels.add(new Channel(response));
+				}				
+			}
 		}
 	}
 	
-	private void requestForChannels(String request, OutputStream output, BufferedReader reader) throws IOException, InterruptedException {
-		
+	private void subscribeChannel(String data, OutputStream output, BufferedReader reader) throws IOException, InterruptedException  {
+		String[] splitted = data.split(";");
+		String channelID = splitted[2];
+		String channelName = splitted[3];
+		String request = splitted[0] + ";4;" + splitted[2]; 
+		output.write(request.getBytes());
+		int counter = 0;
+		while(!reader.ready() && counter < 20) {
+			Thread.currentThread().sleep(100);
+			counter++;
+		}
+//		reader.read(buffor, 0, 5);
+		//TODO: temporary
+		reader.read(buffor);
+//		if(buffor[4] == '0') {
+			channels.add(new Channel(channelID, channelName));
+//		}
+	}
+	
+	private void requestForAvailableChannels(String request, OutputStream output, BufferedReader reader) throws IOException, InterruptedException {
+		output.write(request.getBytes());
+		int counter = 0;
+		List<String> tmp = new ArrayList<>();
+		while(!reader.ready() && counter < 20) {
+			Thread.currentThread().sleep(100);
+			counter++;
+		}
+		while(!reader.ready()) {}		
+		while(reader.ready()) {
+			reader.read(buffor, 0, 2);
+			int length = 0;
+			if(buffor[1] == ';') {
+				length = Integer.valueOf(String.valueOf(buffor[0]));
+				reader.read(buffor, 0, 1);
+			} else {
+				length = Integer.valueOf(String.valueOf(buffor[0])) * 10 + Integer.valueOf(String.valueOf(buffor[1]));
+				reader.read(buffor, 0, 2);
+			}
+			reader.read(buffor, 0, 1); //skip semi-colon
+			reader.read(buffor, 0, length);
+			String response = String.valueOf(buffor, 0, length);
+			while(response.length() != length) {
+				reader.read(buffor, 0, length - response.length());
+				response += String.valueOf(buffor, 0, length);
+			}
+			boolean subscribed = false;
+			for(Channel c : channels) {
+				if(c.getName().equals(response.split(";")[1])) {
+					subscribed = true;
+				}
+			}
+			if(!subscribed) {
+				tmp.add(response);
+			}
+		}
+		if(!tmp.isEmpty()) {
+			synchronized (availableChannels) {
+				availableChannels.clear();
+				availableChannels.addAll(tmp);
+			}			
+		}
 	}
 	
 	public void setObservables(ObservableList<String> posts, ObservableList<String> numberOfNewMsgs) {
@@ -315,7 +407,11 @@ public class CommunicationThread implements Runnable {
 		return posts;
 	}		
 	
-	public List<Channel> getChannels() {
+	public ObservableList<Channel> getChannels() {
 		return channels;
+	}
+	
+	public ObservableList<String> getAvailableChannels() {
+		return availableChannels;
 	}
 }

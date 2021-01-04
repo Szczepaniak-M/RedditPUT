@@ -310,15 +310,15 @@ int addChannel(ServerStatus *status, int descriptor, int size, int index) {
 
     // subscribe channel
     error = insertSubscription(status, status->activeUsers[index].id, channel.id);
-    sendChannel(status, &channel, '7', descriptor, index);
-
-    free(content);
+    
     // send confirmation
     if (error == 0) {
         sendResponse(status, '3', 0, descriptor, index);
     } else {
         sendResponse(status, '3', 1, descriptor, index);
     }
+    sendChannel(status, &channel, '7', descriptor, index);
+    free(content);
     return error;
 }
 
