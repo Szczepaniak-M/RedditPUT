@@ -1,0 +1,11 @@
+label {
+    -fx-background-color: white;
+}
+
+#currentChannel {
+    -fx-border-color: red;
+}
+
+#lblCanals {
+    -fx-border-color: blue;
+}

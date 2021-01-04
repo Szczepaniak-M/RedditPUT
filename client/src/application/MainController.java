@@ -134,7 +134,12 @@ public class MainController implements Initializable {
 							Dialog dialog = new ChoiceDialog(names.get(0), names);
 							dialog.setTitle("Subscribe Channel");
 							dialog.setHeaderText("Please choose channel to subscribe");
-
+							// KDE error: not showing dialog - fix
+							dialog.setResizable(true);
+							dialog.onShownProperty().addListener(e -> {
+								Platform.runLater(() -> dialog.setResizable(false));
+							});
+							// End of fix
 							Optional<String> result = dialog.showAndWait();				
 							if (result.isPresent()) {
 								int index = names.indexOf(result.get());
@@ -162,7 +167,12 @@ public class MainController implements Initializable {
 		Dialog dialog = new TextInputDialog();
 		dialog.setTitle("Add channel");
 		dialog.setHeaderText("Enter channel name");
-
+		// KDE error: not showing dialog - fix
+		dialog.setResizable(true);
+		dialog.onShownProperty().addListener(e -> {
+			Platform.runLater(() -> dialog.setResizable(false));
+		});
+		// End of fix
 		Optional<String> result = dialog.showAndWait();
 		if (result.isPresent()) {		
 			System.out.println(result.get());
@@ -193,6 +203,12 @@ public class MainController implements Initializable {
 		Dialog dialog = new ChoiceDialog(names.get(0), names);
 		dialog.setTitle("Remove Channel");
 		dialog.setHeaderText("Please choose channel to unsubscribe");
+		// KDE error: not showing dialog - fix
+		dialog.setResizable(true);
+		dialog.onShownProperty().addListener(e -> {
+			Platform.runLater(() -> dialog.setResizable(false));
+		});
+		// End of fix
 
 		Optional<String> result = dialog.showAndWait();				
 		if (result.isPresent()) {
@@ -270,19 +286,27 @@ public class MainController implements Initializable {
 			b.setPrefHeight(height);
 			b.setPrefWidth(width);
 			b.setMnemonicParsing(false);
-			b.setText(channelName + " | [" + c.getObsList().get(0) + "]");
+			b.setText(channelName);
+			Label l = new Label();
+			l.setId(channelName+"-label");
+			l.setLayoutX(positionX+ + width + 10);
+			l.setLayoutY(startY + shiftY);
+			l.setPrefHeight(height);
+			l.setPrefWidth(height);
+			l.setMnemonicParsing(false);
+			l.setText(c.getObsList().get(0).toString());
 			c.getObsList().addListener(new ListChangeListener<Integer>() {
 				@Override
 				public void onChanged(Change<? extends Integer> change) {
 					while(change.next()) {
 						if(change.wasAdded()) {
 							Platform.runLater(() -> {
-								b.setText(channelName + " | [" + c.getObsList().get(0) + "]");
-							});										
+								l.setText(c.getObsList().get(0).toString());
+							});
 						}
 					}
 				}
-			});			
+			});
 			b.setOnAction(e -> {
 				currentChannel.setText(channelName);				
 				String requestForPosts = channelID.length() + ";8;" + channelID;
@@ -293,6 +317,7 @@ public class MainController implements Initializable {
 				printMessages();
 			});
 			rootPane.getChildren().add(b);
+			rootPane.getChildren().add(l);
 			buttons.add(b);
 			shiftY += 40;
 		}
