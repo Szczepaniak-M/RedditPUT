@@ -38,6 +38,8 @@ int selectUsersByChannelId(ServerStatus *status, int channelId, sqlite3_stmt **s
 
 int selectChannelsByUserId(ServerStatus *status, int userId, sqlite3_stmt **stmt);
 
+int selectChannelNameById(ServerStatus *status, Channel *channel);
+
 int selectPostByChannelId(ServerStatus *status, int channelId, sqlite3_stmt **stmt);
 
 int selectAllChannels(ServerStatus *status, sqlite3_stmt **stmt);

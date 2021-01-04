@@ -373,7 +373,7 @@ int selectNewPostIdByUserId(ServerStatus *status, int userId, int *postId) {
     int error;
     sqlite3_stmt *stmt;
     const char *operationName = "selectNewPostIdByUserId";
-    const char *sqlStatement = "SELECT ID FROM POST WHERE USER_ID = ? ORDER BY ID DESC;";
+    const char *sqlStatement = "SELECT ID FROM POST WHERE USER_ID = ? ORDER BY ID DESC LIMIT 1;";
 
     error = sqlite3_prepare_v2(status->db, sqlStatement, -1, &stmt, NULL);
     if (error != SQLITE_OK) {
@@ -390,8 +390,6 @@ int selectNewPostIdByUserId(ServerStatus *status, int userId, int *postId) {
     error = sqlite3_step(stmt);
     if (error == SQLITE_ROW) {
         *postId = sqlite3_column_int(stmt, 0);
-    } else if (error == SQLITE_DONE) {
-        postId = NULL;
     } else {
         executeError(status, operationName, stmt);
         return error;
@@ -462,6 +460,38 @@ int selectChannelsByUserId(ServerStatus *status, int userId, sqlite3_stmt **stmt
     return error;
 }
 
+int selectChannelNameById(ServerStatus *status, Channel *channel) {
+    int error;
+    sqlite3_stmt *stmt;
+    const char *operationName = "selectChannelNameById";
+    const char *sqlStatement = "SELECT ID FROM CHANNEL " \
+                               "WHERE NAME = ? " \
+                               "LIMIT 1;";
+
+    error = sqlite3_prepare_v2(status->db, sqlStatement, -1, &stmt, NULL);
+    if (error != SQLITE_OK) {
+        prepareError(status, operationName, stmt);
+        return error;
+    }
+
+    error = sqlite3_bind_text(stmt, 1, channel->name, -1, SQLITE_TRANSIENT);
+    if (error != SQLITE_OK) {
+        bindTextError(status, "CHANNEL_NAME", channel->name, operationName, stmt);
+        return error;
+    }
+    error = sqlite3_step(stmt);
+    if (error == SQLITE_ROW) {
+        channel->id = sqlite3_column_int(stmt, 0);
+    } else if (error == SQLITE_DONE) {
+        channel->id = -1;
+    } else {
+        executeError(status, operationName, stmt);
+        return error;
+    }
+    sqlite3_finalize(stmt);
+    return SQLITE_OK;
+}
+
 int selectAllChannels(ServerStatus *status, sqlite3_stmt **stmt) {
     int error;
     const char *operationName = "selectAllChannels";
@@ -483,7 +513,8 @@ int selectPostByChannelId(ServerStatus *status, int channelId, sqlite3_stmt **st
     const char *sqlStatement = "SELECT p.ID, u.NAME, p.CONTENT " \
                                "FROM POST p " \
                                "INNER JOIN USER U on U.ID = p.USER_ID " \
-                               "WHERE CHANNEL_ID = ?;";
+                               "WHERE CHANNEL_ID = ? "
+                               "ORDER BY ID DESC;";
 
     error = sqlite3_prepare_v2(status->db, sqlStatement, -1, stmt, NULL);
     if (error != SQLITE_OK) {
