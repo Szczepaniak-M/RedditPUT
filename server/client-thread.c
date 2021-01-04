@@ -135,7 +135,7 @@ int signUp(ServerStatus *status, int descriptor, int size, int index) {
 int login(ServerStatus *status, int descriptor, int size, int index) {
     User user;
     int error;
-
+    perror("XD");
     // transform data
     char *content = readContent(descriptor, size, &error);
     if (error == -1) {
@@ -145,7 +145,7 @@ int login(ServerStatus *status, int descriptor, int size, int index) {
     char *savePointer;
     user.name = strtok_r(content, ";", &savePointer);
     char *password = strtok_r(NULL, ";", &savePointer);
-
+    perror("XD");
     // check if login exists in database
     error = selectUserByName(status, &user);
     if (user.name == NULL) {
@@ -153,7 +153,7 @@ int login(ServerStatus *status, int descriptor, int size, int index) {
         free(content);
         return error;
     }
-
+    perror("XD");
     // encrypt password
     pthread_mutex_lock(&status->cryptMutex);
     char *cryptPassword = crypt(password, "$6$pt4wu5ns");
@@ -163,7 +163,7 @@ int login(ServerStatus *status, int descriptor, int size, int index) {
     free(user.name);
     free(user.password);
     free(content);
-
+    perror("XD");
     // send confirmation if password is correct
     if (error != 0) { // wrong password
         sendResponse(status, '1', 1, descriptor, index);
@@ -204,7 +204,7 @@ int login(ServerStatus *status, int descriptor, int size, int index) {
         return error;
     }
     sqlite3_finalize(stmt);
-
+    perror("XD");
     return 0;
 }
 
@@ -494,7 +494,7 @@ int sendResponse(ServerStatus *status, char type, int fail, int descriptor, int 
     sprintf(response, "1;%c;%d", type, fail);
     pthread_mutex_lock(&status->descriptorMutex[index]);
     error = write(descriptor, response, strlen(response) * sizeof(char));
-    pthread_mutex_lock(&status->descriptorMutex[index]);
+    pthread_mutex_unlock(&status->descriptorMutex[index]);
     free(response);
     return error;
 }
