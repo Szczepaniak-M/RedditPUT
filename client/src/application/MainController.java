@@ -102,6 +102,8 @@ public class MainController implements Initializable {
 		for(Channel c : channels) {
 			names.add(c.getName());
 		}
+		if(names.isEmpty())
+			return;
 		Dialog dialog = new ChoiceDialog(names.get(0), names);
 		dialog.setTitle("Remove Channel");
 		dialog.setHeaderText("Please choose channel to unsubscribe");

@@ -21,7 +21,7 @@ public class CommunicationThread implements Runnable {
 	private Thread applicationThread;
 	private List<String> loginContainer;
 	private List<String> communicationContainer;
-	private Type type;
+	private Type typeAction;
 	private ObservableList<String> posts;
 	private ObservableList<String> numberOfNewMsgs;
 	private List<Channel> channels = new ArrayList<>();
@@ -36,7 +36,7 @@ public class CommunicationThread implements Runnable {
 		this.port = port;
 		this.applicationThread = loginControllerThread;
 		this.loginContainer = success;
-		this.type = type;
+		this.typeAction = type;
 		this.communicationContainer = communicationContainer;
 	}
 	
@@ -125,7 +125,7 @@ public class CommunicationThread implements Runnable {
 		int totalLength = loginLength + passwordLength + 1;
 		StringBuilder requestBuilder = new StringBuilder();
 		requestBuilder.append(totalLength);
-		if(type.equals(Type.REGISTRATION)) {
+		if(typeAction.equals(Type.REGISTRATION)) {
 			requestBuilder.append(";0;");
 		} else {
 			requestBuilder.append(";1;");
@@ -141,7 +141,8 @@ public class CommunicationThread implements Runnable {
 		if(response.charAt(4) == '0') {
 			loginContainer.remove(0);
 			loginContainer.add("true");
-			readFirstResponse(reader);
+			if(typeAction.equals(Type.LOGIN))
+				readFirstResponse(reader);
 			accepted = true;
 		}
 		synchronized (applicationThread) {
@@ -190,8 +191,9 @@ public class CommunicationThread implements Runnable {
 					while(response.length() != length) {
 						reader.read(buffor, 0, length - response.length());
 						response += String.valueOf(buffor, 0, length);
-					}					
-					channels.add(new Channel(response));
+					}	
+					if(!response.split(";")[0].equals("0"))
+						channels.add(new Channel(response));
 					break;
 			}
 		}
