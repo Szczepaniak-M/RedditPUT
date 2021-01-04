@@ -2,14 +2,12 @@ package application;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.scene.control.Button;
 
 public class Channel {
 	private String id;
 	private String name;
 	private int numberOfNewMsgs = 0;
 	private ObservableList<Integer> obsList = FXCollections.observableArrayList();
-//	private Button button;
 	
 	public Channel(String response) {
 		this.id = response.split(";")[0];
@@ -44,12 +42,4 @@ public class Channel {
 	public ObservableList<Integer> getObsList() {
 		return obsList;
 	}
-	
-//	public void setButton(Button button) {
-//		this.button = button;
-//	}
-//	
-//	public Button getButton() {
-//		return button;
-//	}
 }
