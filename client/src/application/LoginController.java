@@ -3,6 +3,7 @@ package application;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.ResourceBundle;
 
@@ -29,7 +30,8 @@ public class LoginController implements Initializable {
 	@FXML
     private TextField tfPort;
     
-	private List<String> communicationContainer = new ArrayList<>();
+	private List<String> communicationContainer = Collections.synchronizedList(new ArrayList<>());
+	private List<String> loginContainer = Collections.synchronizedList(new ArrayList<>());
 	private Type type;
 	
 	private CommunicationThread communicationThread;
@@ -41,7 +43,7 @@ public class LoginController implements Initializable {
     public void loginBtnOnClickListener() throws IOException {
     	System.out.println("Log In User " + tfLogin.getText() + " server address " + tfServerAddress.getText() + " port " + tfPort.getText());
     	type = Type.LOGIN;
-    	communicationContainer.add("false");
+    	loginContainer.add("false");
     	Thread currentThread = Thread.currentThread();
     	communicationThread = new CommunicationThread(
     			tfLogin.getText(),
@@ -49,19 +51,22 @@ public class LoginController implements Initializable {
     			tfServerAddress.getText(),
     			Integer.valueOf(tfPort.getText()),
     			currentThread,
-    			communicationContainer,
-    			type);
+    			loginContainer,
+    			type,
+    			communicationContainer);
     	    	
     	Thread t = new Thread(communicationThread);
     	t.setName("Communication Thread");
     	t.start();
     	try {
     		synchronized (currentThread) {
-    			currentThread.wait(1000000);
-    			if(communicationContainer.get(0).equals("true")) {
+    			currentThread.wait(5000);
+    			if(loginContainer.get(0).equals("true")) {
+    				loginContainer.clear();
     				redirectToMainScene();
     			} else {
     				System.out.println("Incorrect password");
+    				loginContainer.clear();
     			}
 			}			
 		} catch (InterruptedException e) {
@@ -73,7 +78,7 @@ public class LoginController implements Initializable {
 	public void signUpBtnOnClickListner() throws IOException {
 		System.out.println("Sign Up User " + tfLogin.getText() + " server address " + tfServerAddress.getText() + " port " + tfPort.getText());
     	type = Type.REGISTRATION;
-    	communicationContainer.add("false");
+    	loginContainer.add("false");
     	Thread currentThread = Thread.currentThread();
     	communicationThread = new CommunicationThread(
     			tfLogin.getText(),
@@ -81,18 +86,21 @@ public class LoginController implements Initializable {
     			tfServerAddress.getText(),
     			Integer.valueOf(tfPort.getText()),
     			currentThread,
-    			communicationContainer,
-    			type);
+    			loginContainer,
+    			type,
+    			communicationContainer);
     	    	
     	Thread t = new Thread(communicationThread);
     	t.setName("Communication Thread");
     	t.start();
     	try {
     		synchronized (currentThread) {
-    			currentThread.wait(100000);
-    			if(communicationContainer.get(0).equals("true")) {
+    			currentThread.wait(5000);
+    			if(loginContainer.get(0).equals("true")) {
+    				loginContainer.clear();
     				redirectToMainScene();
     			} else {
+    				loginContainer.clear();
     				System.out.println("Account duplicated");    				
     			}
 			}			
@@ -105,7 +113,7 @@ public class LoginController implements Initializable {
 		//pass references to another controller
     	MainController mainController = new MainController();
     	FXMLLoader loader = new FXMLLoader(getClass().getResource("MainWindow.fxml"));    	 
-    	mainController.initData("Text from login controller", communicationThread, communicationContainer);
+    	mainController.initData(communicationThread, communicationContainer);
     	loader.setController(mainController);
     	
     	//load main scene

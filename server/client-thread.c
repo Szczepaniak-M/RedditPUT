@@ -189,7 +189,7 @@ int login(ServerStatus *status, int descriptor, int size) {
     error = selectChannelsByUserId(status, user.id, &stmt);
     while (error == SQLITE_ROW) {
         channel.id = sqlite3_column_int(stmt, 0);
-        channel.name = (char *) sqlite3_column_text(stmt, 0);
+        channel.name = (char *) sqlite3_column_text(stmt, 1);
         sendChannel(&channel, descriptor);
         error = sqlite3_step(stmt);
     }
@@ -418,6 +418,7 @@ int sendChannel(Channel *channel, int descriptor) {
     char *response = (char *) malloc(sizeof(char) * (dataSize + dataLength + 3));
     sprintf(response, "%d;7;%d;%s", dataLength, channel->id, channel->name);
     error = write(descriptor, response, strlen(response) * sizeof(char));
+    perror(response);
     free(response);
     return error;
 }
