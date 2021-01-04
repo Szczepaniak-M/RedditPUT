@@ -546,7 +546,7 @@ int selectPostByChannelId(ServerStatus *status, int channelId, sqlite3_stmt **st
                                "FROM POST p " \
                                "INNER JOIN USER U on U.ID = p.USER_ID " \
                                "WHERE CHANNEL_ID = ? "
-                               "ORDER BY p.ID ASC;";
+                               "ORDER BY ID DESC;";
 
     error = sqlite3_prepare_v2(status->db, sqlStatement, -1, stmt, NULL);
     if (error != SQLITE_OK) {
