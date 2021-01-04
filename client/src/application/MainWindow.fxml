@@ -13,7 +13,7 @@
    <Button fx:id="btnLoadMsgs" layoutX="378.0" layoutY="185.0" mnemonicParsing="false" onAction="#btnLoadMsgsListener" prefHeight="30.0" prefWidth="150.0" text="Load new messages" />
    <Label fx:id="lblCanals" layoutX="50.0" layoutY="100.0" prefHeight="30.0" prefWidth="110.0" style="-fx-background-color: white; -fx-border-color: blue;" text="Channels" textAlignment="CENTER" />
    <Button fx:id="btnAddChannel" layoutX="50.0" layoutY="140.0" mnemonicParsing="false" prefHeight="30.0" prefWidth="130.0" text="Add Channel +" />
-   <Button fx:id="btnRemoveChannel" layoutX="50.0" layoutY="180.0" mnemonicParsing="false" prefHeight="30.0" prefWidth="130.0" text="Remove -" />
+   <Button fx:id="btnRemoveChannel" layoutX="50.0" layoutY="180.0" mnemonicParsing="false" onAction="#btnRemoveChannelClickListener" prefHeight="30.0" prefWidth="130.0" text="Remove -" />
    <Label fx:id="currentChannel" layoutX="250.0" layoutY="125.0" prefHeight="42.0" prefWidth="405.0" style="-fx-background-color: white; -fx-border-color: red;" wrapText="true" />
    <ListView fx:id="listViewMessages" layoutX="250.0" layoutY="250.0" prefHeight="400.0" prefWidth="405.0" />   
 </Pane>
