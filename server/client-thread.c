@@ -45,6 +45,8 @@ void *clientThread(void *inputData) {
                 case '8': // show post in channel
                     error = getPostByChannelId(status, descriptor, size);
                     break;
+                case '9':
+                    error = getAllChannels(status, descriptor);
                 default:
                     break;
             }
@@ -190,7 +192,7 @@ int login(ServerStatus *status, int descriptor, int size) {
     while (error == SQLITE_ROW) {
         channel.id = sqlite3_column_int(stmt, 0);
         channel.name = (char *) sqlite3_column_text(stmt, 1);
-        sendChannel(&channel, descriptor);
+        sendChannel(&channel, '7',descriptor);
         error = sqlite3_step(stmt);
     }
     if (error != SQLITE_DONE) {
@@ -394,6 +396,26 @@ int getPostByChannelId(ServerStatus *status, int descriptor, int size) {
     return error;
 }
 
+int getAllChannels(ServerStatus *status, int descriptor){
+    int error;
+    Channel channel;
+    sqlite3_stmt *stmt = NULL;
+
+    error = selectAllChannels(status, &stmt);
+    while (error == SQLITE_ROW) {
+        channel.id = sqlite3_column_int(stmt, 0);
+        channel.name = (char *) sqlite3_column_text(stmt, 1);
+        sendChannel(&channel, '9', descriptor);
+        error = sqlite3_step(stmt);
+    }
+    if (error != SQLITE_DONE) {
+        executeError(status, "selectChannelsByUserId", stmt);
+        return error;
+    }
+    sqlite3_finalize(stmt);
+    return 0;
+}
+
 int sendNotice(int channelId, int descriptor) {
     int error;
     int channelIdSize = intLength(channelId);
@@ -405,16 +427,15 @@ int sendNotice(int channelId, int descriptor) {
     return error;
 }
 
-int sendChannel(Channel *channel, int descriptor) {
+int sendChannel(Channel *channel, char requestType, int descriptor) {
     int error;
     int channelIdSize = intLength(channel->id);
     int channelNameSize = strlen(channel->name);
     int dataLength = channelIdSize + channelNameSize + 1;
     int dataSize = intLength(dataLength);
     char *response = (char *) malloc(sizeof(char) * (dataSize + dataLength + 3));
-    sprintf(response, "%d;7;%d;%s", dataLength, channel->id, channel->name);
+    sprintf(response, "%d;%c;%d;%s", dataLength, requestType, channel->id, channel->name);
     error = write(descriptor, response, strlen(response) * sizeof(char));
-    perror(response);
     free(response);
     return error;
 }

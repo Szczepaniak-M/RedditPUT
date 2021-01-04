@@ -26,9 +26,11 @@ int unsubscribeChannel(ServerStatus *status, int descriptor, int size, int index
 
 int getPostByChannelId(ServerStatus *status, int descriptor, int size);
 
+int getAllChannels(ServerStatus *status, int descriptor);
+
 int sendNotice(int channelId, int descriptor);
 
-int sendChannel(Channel *channel, int descriptor);
+int sendChannel(Channel *channel, char requestType, int descriptor);
 
 int sendPost(Post *post, int descriptor);
 

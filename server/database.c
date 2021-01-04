@@ -462,6 +462,21 @@ int selectChannelsByUserId(ServerStatus *status, int userId, sqlite3_stmt **stmt
     return error;
 }
 
+int selectAllChannels(ServerStatus *status, sqlite3_stmt **stmt) {
+    int error;
+    const char *operationName = "selectAllChannels";
+    const char *sqlStatement = "SELECT ID, NAME FROM CHANNEL;";
+
+    error = sqlite3_prepare_v2(status->db, sqlStatement, -1, stmt, NULL);
+    if (error != SQLITE_OK) {
+        prepareError(status, operationName, *stmt);
+        return error;
+    }
+
+    error = sqlite3_step(*stmt);
+    return error;
+}
+
 int selectPostByChannelId(ServerStatus *status, int channelId, sqlite3_stmt **stmt) {
     int error;
     const char *operationName = "selectPostByChannelId";
