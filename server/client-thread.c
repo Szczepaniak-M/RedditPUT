@@ -284,7 +284,7 @@ int addChannel(ServerStatus *status, int descriptor, int size, int index) {
     channel.name = content;
 
     // check if channel name is duplicated
-    error = selectChannelNameById(status, &channel);
+    error = selectChannelIdByName(status, &channel);
     if (error != 0 || channel.id != -1) {
         sendResponse(status, '3', 1, descriptor, index);
         free(content);
@@ -300,7 +300,7 @@ int addChannel(ServerStatus *status, int descriptor, int size, int index) {
     }
 
     // get inserted channel id
-    error = selectChannelNameById(status, &channel);
+    error = selectChannelIdByName(status, &channel);
     if (error != 0) {
         sendResponse(status, '3', 1, descriptor, index);
         free(content);
@@ -309,6 +309,8 @@ int addChannel(ServerStatus *status, int descriptor, int size, int index) {
 
     // subscribe channel
     error = insertSubscription(status, status->activeUsers[index].id, channel.id);
+    sendChannel(status, &channel, '7', descriptor, index);
+
     free(content);
     // send confirmation
     if (error == 0) {
@@ -331,10 +333,21 @@ int subscribeChannel(ServerStatus *status, int descriptor, int size, int index) 
 
     int userId = status->activeUsers[index].id;
     int channelId = atoi(content);
+    free(content);
 
     // insert data
     error = insertSubscription(status, userId, channelId);
-    free(content);
+
+    // send new channel
+    Channel channel;
+    channel.id = channelId;
+    error = selectChannelNameById(status, &channel);
+    if (error != 0) {
+        sendResponse(status, '4', 1, descriptor, index);
+        return error;
+    }
+    sendChannel(status, &channel, '7', descriptor, index);
+    free(channel.name);
 
     // send confirmation
     if (error == 0) {
