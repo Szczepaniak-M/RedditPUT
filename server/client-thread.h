@@ -12,23 +12,25 @@
 
 void *clientThread(void *data);
 
-int signUp(ServerStatus *status, int descriptor, int size);
+int signUp(ServerStatus *status, int descriptor, int size, int index);
 
-int login(ServerStatus *status, int descriptor, int size);
+int login(ServerStatus *status, int descriptor, int size, int index);
 
 int addPost(ServerStatus *status, int descriptor, int size, int index);
 
-int addChannel(ServerStatus *status, int descriptor, int size);
+int addChannel(ServerStatus *status, int descriptor, int size, int index);
 
 int subscribeChannel(ServerStatus *status, int descriptor, int size, int index);
 
 int unsubscribeChannel(ServerStatus *status, int descriptor, int size, int index);
 
-int getPostByChannelId(ServerStatus *status, int descriptor, int size);
+int getPostByChannelId(ServerStatus *status, int descriptor, int size, int index);
+
+int getAllChannels(ServerStatus *status, int descriptor);
 
 int sendNotice(int channelId, int descriptor);
 
-int sendChannel(Channel *channel, int descriptor);
+int sendChannel(Channel *channel, char requestType, int descriptor);
 
 int sendPost(Post *post, int descriptor);
 

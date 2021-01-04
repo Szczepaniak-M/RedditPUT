@@ -25,16 +25,16 @@ void *clientThread(void *inputData) {
         } else if (delimiterCounter == 1 && readChar == ';') {
             switch (requestType) {
                 case '0': // registration
-                    error = signUp(status, descriptor, size);
+                    error = signUp(status, descriptor, size, index);
                     break;
                 case '1': // login
-                    error = login(status, descriptor, size);
+                    error = login(status, descriptor, size, index);
                     break;
                 case '2': // add post
                     error = addPost(status, descriptor, size, index);
                     break;
                 case '3': // add channel
-                    error = addChannel(status, descriptor, size);
+                    error = addChannel(status, descriptor, size, index);
                     break;
                 case '4': // subscribe channel
                     error = subscribeChannel(status, descriptor, size, index);
@@ -43,8 +43,10 @@ void *clientThread(void *inputData) {
                     error = unsubscribeChannel(status, descriptor, size, index);
                     break;
                 case '8': // show post in channel
-                    error = getPostByChannelId(status, descriptor, size);
+                    error = getPostByChannelId(status, descriptor, size, index);
                     break;
+                case '9':
+                    error = getAllChannels(status, descriptor);
                 default:
                     break;
             }
@@ -56,14 +58,10 @@ void *clientThread(void *inputData) {
     }
 
     pthread_mutex_lock(&status->activeUsersMutex);
-    for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
-        if (status->activeUsers[i].descriptor == descriptor) {
-            status->activeUsers[i].descriptor = -1;
-            if (status->isCleaning == 0) {
-                status->pthreads[i].isInitialized = 0;
-                pthread_detach(pthread_self());
-            }
-        }
+    status->activeUsers[index].descriptor = -1;
+    if (status->isCleaning == 0) {
+        status->pthreads[index].isInitialized = 0;
+        pthread_detach(pthread_self());
     }
     pthread_mutex_unlock(&status->activeUsersMutex);
     free(inputData);
@@ -71,7 +69,7 @@ void *clientThread(void *inputData) {
     pthread_exit(NULL);
 }
 
-int signUp(ServerStatus *status, int descriptor, int size) {
+int signUp(ServerStatus *status, int descriptor, int size, int index) {
     int error;
     User user;
 
@@ -121,11 +119,9 @@ int signUp(ServerStatus *status, int descriptor, int size) {
     free(user.password);
     free(user.name);
     free(content);
-    for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
-        if (status->activeUsers[i].descriptor == descriptor) {
-            status->activeUsers[i].id = user.id;
-        }
-    }
+
+    // set user id
+    status->activeUsers[index].id = user.id;
 
     // send confirmation
     if (error == 0) {
@@ -136,7 +132,7 @@ int signUp(ServerStatus *status, int descriptor, int size) {
     return 0;
 }
 
-int login(ServerStatus *status, int descriptor, int size) {
+int login(ServerStatus *status, int descriptor, int size, int index) {
     User user;
     int error;
 
@@ -176,12 +172,8 @@ int login(ServerStatus *status, int descriptor, int size) {
         sendResponse('1', 0, descriptor);
     }
 
-    // add user to active user list
-    for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
-        if (status->activeUsers[i].descriptor == descriptor) {
-            status->activeUsers[i].id = user.id;
-        }
-    }
+    // set user id
+    status->activeUsers[index].id = user.id;
 
     // send list of subscribed channels
     sqlite3_stmt *stmt = NULL;
@@ -190,7 +182,7 @@ int login(ServerStatus *status, int descriptor, int size) {
     while (error == SQLITE_ROW) {
         channel.id = sqlite3_column_int(stmt, 0);
         channel.name = (char *) sqlite3_column_text(stmt, 1);
-        sendChannel(&channel, descriptor);
+        sendChannel(&channel, '7', descriptor);
         error = sqlite3_step(stmt);
     }
     if (error != SQLITE_DONE) {
@@ -279,7 +271,7 @@ int addPost(ServerStatus *status, int descriptor, int size, int index) {
     return 0;
 }
 
-int addChannel(ServerStatus *status, int descriptor, int size) {
+int addChannel(ServerStatus *status, int descriptor, int size, int index) {
     Channel channel;
     int error;
 
@@ -291,10 +283,33 @@ int addChannel(ServerStatus *status, int descriptor, int size) {
     }
     channel.name = content;
 
+    // check if channel name is duplicated
+    error = selectChannelNameById(status, &channel);
+    if (error != 0 || channel.id != -1) {
+        sendResponse('3', 1, descriptor);
+        free(content);
+        return error;
+    }
+
     // insert data
     error = insertChannel(status, &channel);
-    free(content);
+    if (error != 0) {
+        sendResponse('3', 1, descriptor);
+        free(content);
+        return error;
+    }
 
+    // get inserted channel id
+    error = selectChannelNameById(status, &channel);
+    if (error != 0) {
+        sendResponse('3', 1, descriptor);
+        free(content);
+        return error;
+    }
+
+    // subscribe channel
+    error = insertSubscription(status, status->activeUsers[index].id, channel.id);
+    free(content);
     // send confirmation
     if (error == 0) {
         sendResponse('3', 0, descriptor);
@@ -346,6 +361,13 @@ int unsubscribeChannel(ServerStatus *status, int descriptor, int size, int index
     // delete data
     error = deleteSubscription(status, userId, channelId);
     free(content);
+    if (error != 0) {
+        sendResponse('5', 1, descriptor);
+        return error;
+    }
+
+    // delete invalid notifications
+    error = deleteNotice(status, status->activeUsers[index].id, channelId);
 
     // send confirmation
     if (error == 0) {
@@ -356,7 +378,7 @@ int unsubscribeChannel(ServerStatus *status, int descriptor, int size, int index
     return error;
 }
 
-int getPostByChannelId(ServerStatus *status, int descriptor, int size) {
+int getPostByChannelId(ServerStatus *status, int descriptor, int size, int index) {
     int error;
 
     // transform data
@@ -385,13 +407,28 @@ int getPostByChannelId(ServerStatus *status, int descriptor, int size) {
     sqlite3_finalize(stmt);
 
     // delete invalid notifications
-    for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
-        if (descriptor == status->activeUsers[i].descriptor) {
-            error = deleteNotice(status, status->activeUsers[i].id, channelId);
-            break;
-        }
-    }
+    error = deleteNotice(status, status->activeUsers[index].id, channelId);
     return error;
+}
+
+int getAllChannels(ServerStatus *status, int descriptor) {
+    int error;
+    Channel channel;
+    sqlite3_stmt *stmt = NULL;
+
+    error = selectAllChannels(status, &stmt);
+    while (error == SQLITE_ROW) {
+        channel.id = sqlite3_column_int(stmt, 0);
+        channel.name = (char *) sqlite3_column_text(stmt, 1);
+        sendChannel(&channel, '9', descriptor);
+        error = sqlite3_step(stmt);
+    }
+    if (error != SQLITE_DONE) {
+        executeError(status, "selectChannelsByUserId", stmt);
+        return error;
+    }
+    sqlite3_finalize(stmt);
+    return 0;
 }
 
 int sendNotice(int channelId, int descriptor) {
@@ -405,16 +442,15 @@ int sendNotice(int channelId, int descriptor) {
     return error;
 }
 
-int sendChannel(Channel *channel, int descriptor) {
+int sendChannel(Channel *channel, char requestType, int descriptor) {
     int error;
     int channelIdSize = intLength(channel->id);
     int channelNameSize = strlen(channel->name);
     int dataLength = channelIdSize + channelNameSize + 1;
     int dataSize = intLength(dataLength);
     char *response = (char *) malloc(sizeof(char) * (dataSize + dataLength + 3));
-    sprintf(response, "%d;7;%d;%s", dataLength, channel->id, channel->name);
+    sprintf(response, "%d;%c;%d;%s", dataLength, requestType, channel->id, channel->name);
     error = write(descriptor, response, strlen(response) * sizeof(char));
-    perror(response);
     free(response);
     return error;
 }
