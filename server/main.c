@@ -17,6 +17,11 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
         status.activeUsers[i].descriptor = -1;
         status.pthreads[i].isInitialized = 0;
+        error = pthread_mutex_init(&status.descriptorMutex[i], NULL);
+        if ( error != 0) {
+            fprintf(stderr, "%s: Błąd podczas tworzenia descriptorMutex\n", argv[0]);
+            return 1;
+        }
     }
     error = pthread_mutex_init(&status.activeUsersMutex, NULL);
     if ( error != 0) {
