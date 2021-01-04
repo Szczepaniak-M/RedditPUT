@@ -53,27 +53,32 @@ public class CommunicationThread implements Runnable {
 	    				ct.wait(2000);
 					}    			
 	    			while(!communicationContainer.isEmpty()) {
-	    				String request = communicationContainer.get(0);
-	    				String type = request.split(";")[1];
-	    				System.out.println("Type: " + type);
-	    				communicationContainer.remove(0);
-	    				switch (type) {
-	    				case "2":	    					
-	    					sendPost(request, output, reader);
-	    					break;
-						case "8":
-							currentChannelID = request.split(";")[2];
-							requestForPosts(request, output, reader);
-							break;
-						case "logout":
-							break mainLoop;
-						case "n":
-							request = currentChannelID.length() + ";8;" + currentChannelID;
-							requestForPosts(request, output, reader);
-							break;
-						default:
-							break;
-						}
+	    				synchronized (communicationContainer) {
+	    					String request = communicationContainer.get(0);
+		    				String type = request.split(";")[1];
+		    				System.out.println("Type: " + type);
+		    				communicationContainer.remove(0);
+		    				switch (type) {
+		    				case "2":	    					
+		    					sendPost(request, output, reader);
+		    					break;
+		    				case "5":
+		    					unsubscribeChannel(request, output, reader);
+		    					break;	
+							case "8":
+								currentChannelID = request.split(";")[2];
+								requestForPosts(request, output, reader);
+								break;
+							case "logout":
+								break mainLoop;
+							case "n":
+								request = currentChannelID.length() + ";8;" + currentChannelID;
+								requestForPosts(request, output, reader);
+								break;
+							default:
+								break;
+							}
+						}	    				
 	    			}
 	    			if(reader.ready()) {
 	    				int length = reader.read(buffor);
@@ -108,13 +113,6 @@ public class CommunicationThread implements Runnable {
     		ex.printStackTrace();
 			System.out.println("Unknown exception");
 		}
-	}	
-	
-	private int readMessagesFromServer(BufferedReader reader) throws IOException {
-		if(reader.ready())
-			return reader.read();
-		else
-			return -2;
 	}		
 	
 	private boolean firstRequest(OutputStream output, BufferedReader reader) throws IOException {
@@ -191,7 +189,7 @@ public class CommunicationThread implements Runnable {
 						response += String.valueOf(buffor, 0, length);
 					}					
 					channels.add(new Channel(response));
-					communicationContainer.add(response);
+//					communicationContainer.add(response);
 					break;
 			}
 		}
@@ -267,6 +265,22 @@ public class CommunicationThread implements Runnable {
 				numberOfNewMsgs.add("0");
 			}
 			System.out.println("All messages read");
+		}
+	}
+	
+	private void unsubscribeChannel(String request, OutputStream output, BufferedReader reader) throws IOException, InterruptedException {
+		System.err.println(request);
+		output.write(request.getBytes());
+		int counter = 0;
+		while(!reader.ready() && counter < 20) {
+			Thread.currentThread().sleep(100);
+			counter++;
+		}
+		if(!reader.ready()) {
+			//TODO resend
+		} else {
+			reader.read(buffor, 0, 5);	
+			System.err.println(String.valueOf(buffor));
 		}
 	}
 	

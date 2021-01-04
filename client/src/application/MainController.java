@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.ResourceBundle;
 
 import javafx.application.Platform;
@@ -13,7 +14,11 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
+import javafx.scene.control.ChoiceDialog;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
@@ -42,11 +47,12 @@ public class MainController implements Initializable {
 	private ObservableList<String> posts = FXCollections.synchronizedObservableList(FXCollections.observableArrayList(new ArrayList<String>()));
 	private ObservableList<String> numberOfNewMsgs = FXCollections.synchronizedObservableList(FXCollections.observableArrayList(new ArrayList<String>()));
 	private List<Channel> channels;
+	private List<Button> buttons = new ArrayList<>();
 	
 	@Override
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		channels = communicationThread.getChannels();
-		generateChannelButtons(communicationContainer);
+		generateChannelButtons(channels);
 		communicationContainer.clear();				
 		numberOfNewMsgs.addListener(new ListChangeListener<String>() {
 			@Override
@@ -69,6 +75,46 @@ public class MainController implements Initializable {
 		this.communicationThread = communicationThread;
 		this.communicationContainer = communicationContainer;
 		communicationThread.setObservables(posts, numberOfNewMsgs);		        
+	}
+	
+	@FXML
+	public void btnRemoveChannelClickListener() {
+		List<String> names = new ArrayList<>();
+		for(Channel c : channels) {
+			names.add(c.getName());
+		}
+		Dialog dialog = new ChoiceDialog(names.get(0), names);
+		dialog.setTitle("Remove Channel");
+		dialog.setHeaderText("Please choose channel to unsubscribe");
+
+		Optional<String> result = dialog.showAndWait();				
+		if (result.isPresent()) {
+			int index = -1;
+			for(Button b : buttons) {
+				if(b.getId().equals(result.get())) {
+					index = buttons.indexOf(b);
+					rootPane.getChildren().remove(b);
+					break;
+				}
+			}		
+			for(int i = 0; i < buttons.size(); i++) {
+				if(i > index) {
+					Button btn = buttons.get(i);
+					btn.setLayoutY(btn.getLayoutY() - 40);
+				}
+			}
+			buttons.remove(index);
+			for(Channel c : channels) {
+				if(c.getName().equals(result.get() )) {
+					String request = c.getId().length() + ";5;" + c.getId();
+					synchronized(communicationContainer) {
+						communicationContainer.add(request);
+					}
+					channels.remove(c);
+					break;
+				}				
+			}
+		}		
 	}
 	
 	@FXML
@@ -101,38 +147,35 @@ public class MainController implements Initializable {
 		printMessages();
 	}
 	
-	private void generateChannelButtons(List<String> channelNames) {
+	private void generateChannelButtons(List<Channel> channels) {
 		int startY = 220;
 		int shiftY = 0;
 		int positionX = 50;
 		int height = 30;
 		int width = 130;
-		for(String s : channelNames) {
-			String channelID = s.split(";")[0];
-			String channelName = s.split(";")[1];
+		for(Channel c : channels) {
+			String channelID = c.getId();
+			String channelName = c.getName();
 			Button b = new Button();
+			b.setId(channelName);
 			b.setLayoutX(positionX);
 			b.setLayoutY(startY + shiftY);
 			b.setPrefHeight(height);
 			b.setPrefWidth(width);
 			b.setMnemonicParsing(false);
-			for(Channel c : channels) {
-				if(c.getId().equals(channelID)) {
-					b.setText(channelName + " | [" + c.getObsList().get(0) + "]");
-					c.getObsList().addListener(new ListChangeListener<Integer>() {
-						@Override
-						public void onChanged(Change<? extends Integer> change) {
-							while(change.next()) {
-								if(change.wasAdded()) {
-									Platform.runLater(() -> {
-										b.setText(channelName + " | [" + c.getObsList().get(0) + "]");
-									});										
-								}
-							}
+			b.setText(channelName + " | [" + c.getObsList().get(0) + "]");
+			c.getObsList().addListener(new ListChangeListener<Integer>() {
+				@Override
+				public void onChanged(Change<? extends Integer> change) {
+					while(change.next()) {
+						if(change.wasAdded()) {
+							Platform.runLater(() -> {
+								b.setText(channelName + " | [" + c.getObsList().get(0) + "]");
+							});										
 						}
-					});
+					}
 				}
-			}		
+			});			
 			b.setOnAction(e -> {
 				currentChannel.setText(channelName);				
 				String requestForPosts = channelID.length() + ";8;" + channelID;
@@ -143,6 +186,7 @@ public class MainController implements Initializable {
 				printMessages();
 			});
 			rootPane.getChildren().add(b);
+			buttons.add(b);
 			shiftY += 40;
 		}
 	}
