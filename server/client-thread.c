@@ -31,7 +31,7 @@ void *clientThread(void *inputData) {
                     error = login(status, descriptor, size);
                     break;
                 case '2': // add post
-                    error = addPost(status, descriptor, size);
+                    error = addPost(status, descriptor, size, index);
                     break;
                 case '3': // add channel
                     error = addChannel(status, descriptor, size);
@@ -216,7 +216,7 @@ int login(ServerStatus *status, int descriptor, int size) {
     return 0;
 }
 
-int addPost(ServerStatus *status, int descriptor, int size) {
+int addPost(ServerStatus *status, int descriptor, int size, int index) {
     Post post;
     int error;
 
@@ -227,7 +227,7 @@ int addPost(ServerStatus *status, int descriptor, int size) {
         return error;
     }
     char *savePointer;
-    post.userId = atoi(strtok_r(content, ";", &savePointer));
+    post.userId = status->activeUsers[index].id;
     post.channelId = atoi(strtok_r(NULL, ";", &savePointer));
     post.content = strtok_r(NULL, ";", &savePointer);
 

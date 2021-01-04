@@ -16,7 +16,7 @@ int signUp(ServerStatus *status, int descriptor, int size);
 
 int login(ServerStatus *status, int descriptor, int size);
 
-int addPost(ServerStatus *status, int descriptor, int size);
+int addPost(ServerStatus *status, int descriptor, int size, int index);
 
 int addChannel(ServerStatus *status, int descriptor, int size);
 
