@@ -312,16 +312,16 @@ int addChannel(ServerStatus *status, int descriptor, int size, int index) {
 
     // subscribe channel
     error = insertSubscription(status, status->activeUsers[index].id, channel.id);
-    pthread_mutex_lock(&status->descriptorMutex[index]);
-    sendChannel(&channel, '7', descriptor);
-    pthread_mutex_unlock(&status->descriptorMutex[index]);
+
     // send confirmation
     if (error == 0) {
         sendResponse(status, '3', 0, descriptor, index);
     } else {
         sendResponse(status, '3', 1, descriptor, index);
     }
-    sendChannel(status, &channel, '7', descriptor, index);
+    pthread_mutex_lock(&status->descriptorMutex[index]);
+    sendChannel(&channel, '7', descriptor);
+    pthread_mutex_unlock(&status->descriptorMutex[index]);
     free(content);
     return error;
 }
@@ -351,9 +351,9 @@ int subscribeChannel(ServerStatus *status, int descriptor, int size, int index) 
         sendResponse(status, '4', 1, descriptor, index);
         return error;
     }
-    pthread_mutex_lock(&status->descriptorMutex[index]);
-    sendChannel(&channel, '7', descriptor);
-    pthread_mutex_unlock(&status->descriptorMutex[index]);
+//    pthread_mutex_lock(&status->descriptorMutex[index]);
+//    sendChannel(&channel, '7', descriptor);
+//    pthread_mutex_unlock(&status->descriptorMutex[index]);
     free(channel.name);
 
     // send confirmation
