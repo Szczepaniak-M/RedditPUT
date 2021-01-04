@@ -20,9 +20,9 @@ int addPost(ServerStatus *status, int descriptor, int size, int index);
 
 int addChannel(ServerStatus *status, int descriptor, int size);
 
-int subscribeChannel(ServerStatus *status, int descriptor, int size);
+int subscribeChannel(ServerStatus *status, int descriptor, int size, int index);
 
-int unsubscribeChannel(ServerStatus *status, int descriptor, int size);
+int unsubscribeChannel(ServerStatus *status, int descriptor, int size, int index);
 
 int getPostByChannelId(ServerStatus *status, int descriptor, int size);
 

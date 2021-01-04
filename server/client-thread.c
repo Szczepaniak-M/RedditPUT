@@ -37,10 +37,10 @@ void *clientThread(void *inputData) {
                     error = addChannel(status, descriptor, size);
                     break;
                 case '4': // subscribe channel
-                    error = subscribeChannel(status, descriptor, size);
+                    error = subscribeChannel(status, descriptor, size, index);
                     break;
                 case '5': // delete subscription
-                    error = unsubscribeChannel(status, descriptor, size);
+                    error = unsubscribeChannel(status, descriptor, size, index);
                     break;
                 case '8': // show post in channel
                     error = getPostByChannelId(status, descriptor, size);
@@ -304,9 +304,7 @@ int addChannel(ServerStatus *status, int descriptor, int size) {
     return error;
 }
 
-int subscribeChannel(ServerStatus *status, int descriptor, int size) {
-    int userId;
-    int channelId;
+int subscribeChannel(ServerStatus *status, int descriptor, int size, int index) {
     int error;
 
     // transform data
@@ -315,9 +313,9 @@ int subscribeChannel(ServerStatus *status, int descriptor, int size) {
         free(content);
         return error;
     }
-    char *savePointer;
-    userId = atoi(strtok_r(content, ";", &savePointer));
-    channelId = atoi(strtok_r(NULL, ";", &savePointer));
+
+    int userId = status->activeUsers[index].id;
+    int channelId = atoi(content);
 
     // insert data
     error = insertSubscription(status, userId, channelId);
@@ -332,9 +330,7 @@ int subscribeChannel(ServerStatus *status, int descriptor, int size) {
     return error;
 }
 
-int unsubscribeChannel(ServerStatus *status, int descriptor, int size) {
-    int userId;
-    int channelId;
+int unsubscribeChannel(ServerStatus *status, int descriptor, int size, int index) {
     int error;
 
     // transform data
@@ -343,9 +339,9 @@ int unsubscribeChannel(ServerStatus *status, int descriptor, int size) {
         free(content);
         return error;
     }
-    char *savePointer;
-    userId = atoi(strtok_r(content, ";", &savePointer));
-    channelId = atoi(strtok_r(NULL, ";", &savePointer));
+
+    int userId = status->activeUsers[index].id;
+    int channelId = atoi(content);
 
     // delete data
     error = deleteSubscription(status, userId, channelId);
