@@ -315,8 +315,6 @@ int addChannel(ServerStatus *status, int descriptor, int size, int index) {
     pthread_mutex_lock(&status->descriptorMutex[index]);
     sendChannel(&channel, '7', descriptor);
     pthread_mutex_unlock(&status->descriptorMutex[index]);
-
-    free(content);
     // send confirmation
     if (error == 0) {
         sendResponse(status, '3', 0, descriptor, index);
