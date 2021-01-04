@@ -21,7 +21,9 @@ public class CommunicationThread implements Runnable {
 	private List<String> communicationContainer;
 	private Type type;
 	private ObservableList<String> posts;
+	private ObservableList<String> numberOfNewMsgs;
 	private List<Channel> channels = new ArrayList<>();
+	private String currentChannelID = "";
 	
 	public CommunicationThread() {}
 	
@@ -52,25 +54,48 @@ public class CommunicationThread implements Runnable {
 					}    			
 	    			while(!communicationContainer.isEmpty()) {
 	    				String request = communicationContainer.get(0);
-	    				String type = (request.split(";")[1]).substring(0, 1);
+	    				String type = request.split(";")[1];
 	    				System.out.println("Type: " + type);
 	    				communicationContainer.remove(0);
 	    				switch (type) {
-	    				case "2":
+	    				case "2":	    					
 	    					sendPost(request, output, reader);
 	    					break;
 						case "8":
+							currentChannelID = request.split(";")[2];
 							requestForPosts(request, output, reader);
 							break;
-						case "l":
+						case "logout":
 							break mainLoop;
+						case "n":
+							request = currentChannelID.length() + ";8;" + currentChannelID;
+							requestForPosts(request, output, reader);
+							break;
 						default:
 							break;
 						}
 	    			}
 	    			if(reader.ready()) {
 	    				int length = reader.read(buffor);
-	    				String response = String.valueOf(buffor).substring(0, length);
+	    				String response = String.valueOf(buffor).substring(0, length);	    				
+	    				String channelID = response.split(";")[2];
+	    				for(Channel c : channels) {
+	    					if(c.getId().equals(channelID)) {
+	    						c.increaseNumberOfMsgs();
+	    						break;
+	    					}	    					
+	    				}	
+	    				if(channelID.equals(currentChannelID)) {
+	    					for(Channel c : channels) {
+		    					if(c.getId().equals(channelID)) {
+		    						synchronized (numberOfNewMsgs) {
+		    	    					numberOfNewMsgs.remove(0);
+		    	    					numberOfNewMsgs.add(String.valueOf(c.getNumberOfNewMsgs()));
+		    	    				}
+		    						break;
+		    					}	    					
+		    				}	
+	    				}	    				
 	    			}
 	    		}    			
     		}
@@ -109,7 +134,6 @@ public class CommunicationThread implements Runnable {
 		requestBuilder.append(password);
 		
 		String request = requestBuilder.toString();
-		System.out.println(request);
 		output.write(request.getBytes());		
 		reader.read(buffor, 0, 5);
 		String response = String.valueOf(buffor);
@@ -144,8 +168,20 @@ public class CommunicationThread implements Runnable {
 			reader.read(buffor, 0, 1); //skip semi-colon
 			switch(type) {
 				case "6":
-					reader.read(buffor, 0, 1);				
+					int i = reader.read(buffor, 0, length);
+					String request = String.valueOf(buffor).substring(0, i);
+					while(i != length) {
+						int tmp = reader.read(buffor, 0, length - i);
+						i += tmp;
+						request += String.valueOf(buffor).substring(0, tmp);
+					}
 					System.out.println("Notification for channel: " + String.valueOf(buffor[0]));
+					for(Channel c : channels) {
+    					if(c.getId().equals(request)) {
+    						c.increaseNumberOfMsgs();
+    						break;
+    					}	    					
+    				}
 					break;
 				case "7":
 					reader.read(buffor, 0, length);
@@ -153,8 +189,7 @@ public class CommunicationThread implements Runnable {
 					while(response.length() != length) {
 						reader.read(buffor, 0, length - response.length());
 						response += String.valueOf(buffor, 0, length);
-					}
-					System.out.println(response);
+					}					
 					channels.add(new Channel(response));
 					communicationContainer.add(response);
 					break;
@@ -165,19 +200,11 @@ public class CommunicationThread implements Runnable {
 	private void sendPost(String post, OutputStream output, BufferedReader reader) throws IOException, InterruptedException {		
 		String msg = post.split(";")[4];
 		if(!msg.isEmpty()) {
-			String channelName = post.split(";")[3];
-			String channelID = "";
-			for(Channel c : channels) {
-				if(c.getName().equals(channelName)) {
-					channelID = c.getId();
-					break;
-				}
-			}
+			String channelID = currentChannelID;
 			int length = msg.length() + channelID.length() + 1;
 			String request = length + ";2;" + channelID + ";" + msg; 
 			output.write(request.getBytes());
 			int counter = 0;
-			System.out.println(request);
 			while(!reader.ready() && counter < 20) {
 				Thread.currentThread().sleep(100);
 				counter++;
@@ -228,16 +255,31 @@ public class CommunicationThread implements Runnable {
 				}
 				posts.add(response.split(";")[1]+ " said:");
 				posts.add(response.split(";")[2]);
+			}	
+			for(Channel c : channels) {
+				if(c.getId().equals(currentChannelID)) {
+					c.clearNumberOfNewMsgs();
+					break;
+				}
+			}
+			synchronized (numberOfNewMsgs) {
+				numberOfNewMsgs.remove(0);
+				numberOfNewMsgs.add("0");
 			}
 			System.out.println("All messages read");
 		}
 	}
 	
-	public void setPosts(ObservableList<String> posts) {
+	public void setObservables(ObservableList<String> posts, ObservableList<String> numberOfNewMsgs) {
 		this.posts = posts;
+		this.numberOfNewMsgs = numberOfNewMsgs;
 	}
 	
 	public List<String> getPosts() {
 		return posts;
 	}		
+	
+	public List<Channel> getChannels() {
+		return channels;
+	}
 }
