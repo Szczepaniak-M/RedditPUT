@@ -132,5 +132,8 @@ void clean(ServerStatus *status){
     sqlite3_close(status->db);
     pthread_mutex_destroy(&status->activeUsersMutex);
     pthread_mutex_destroy(&status->cryptMutex);
+    for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
+        pthread_mutex_destroy(&status->descriptorMutex[i]);
+    }
 }
 

@@ -25,6 +25,7 @@ typedef struct ServerStatus {
     int serverSocketDescriptor;
     pthread_mutex_t activeUsersMutex;
     pthread_mutex_t cryptMutex;
+    pthread_mutex_t descriptorMutex[ACTIVE_USER_LIMIT];
     ActiveUser activeUsers[ACTIVE_USER_LIMIT];
     Thread pthreads[ACTIVE_USER_LIMIT];
     int isCleaning;
