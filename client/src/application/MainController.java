@@ -286,8 +286,10 @@ public class MainController implements Initializable {
 	private void printMessages() {
 		synchronized (posts) {
 			int index = posts.size();
-			listViewMessages.setItems(posts);
-			listViewMessages.scrollTo(index);
+			Platform.runLater( () -> {
+				listViewMessages.setItems(posts);
+				listViewMessages.scrollTo(index);
+			});
 		}
 	}
 

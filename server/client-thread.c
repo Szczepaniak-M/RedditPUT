@@ -410,6 +410,13 @@ int getPostByChannelId(ServerStatus *status, int descriptor, int size, int index
         sendPost(status, &post, descriptor, index);
         error = sqlite3_step(stmt);
     }
+    if (error == SQLITE_DONE) {
+        post.id = 0;
+        post.userName = "0";
+        post.content = "0";
+        sendPost(status, &post, descriptor, index);
+        return error;
+    }
     pthread_mutex_unlock(&status->descriptorMutex[index]);
     if (error != SQLITE_DONE) {
         executeError(status, "selectPostByChannelId", stmt);

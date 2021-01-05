@@ -1,5 +1,6 @@
 package application;
 
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
@@ -91,7 +92,7 @@ public class CommunicationThread implements Runnable {
                                     break mainLoop;
                                 case "n":
                                     request = currentChannelID.length() + ";8;" + currentChannelID;
-                                    sendRequest(request, output, type);
+                                    sendRequest(request, output, "8");
                                     break;
                                 default:
                                     break;
@@ -396,8 +397,10 @@ public class CommunicationThread implements Runnable {
     	String author = splitted[1];
     	String content = splitted[2];
     	synchronized (posts) {
+            Platform.runLater(() -> {
     		posts.add(author + " said:");
     		posts.add(content);
+            });
 		}
     	synchronized (channels) {
             for (Channel c : channels) {
