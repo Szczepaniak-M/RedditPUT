@@ -54,6 +54,7 @@ public class MainController implements Initializable {
 	private List<Label> labels = new ArrayList<>();
 	private ObservableList<String> availableChannels;
 	private ObservableList<String> errors = FXCollections.synchronizedObservableList(FXCollections.observableArrayList(new ArrayList<>()));
+	private int postsIndex;
 
 	@Override
 	public void initialize(URL arg0, ResourceBundle arg1) {
@@ -164,6 +165,19 @@ public class MainController implements Initializable {
 						}
 					}
 				}								
+			}
+		});
+		posts.addListener(new ListChangeListener<String>() {
+			@Override
+			public void onChanged(Change<? extends String> change) {
+				while(change.next()) {
+					if(change.wasAdded()) {
+						synchronized (posts) {
+							postsIndex = posts.size();
+							listViewMessages.scrollTo(postsIndex);
+						}
+					}
+				}				
 			}
 		});
 	}
@@ -321,11 +335,9 @@ public class MainController implements Initializable {
 	}
 
 	private void printMessages() {
-		synchronized (posts) {
-			int index = posts.size();
+		synchronized (posts) {			
 			Platform.runLater( () -> {
-				listViewMessages.setItems(posts);
-				listViewMessages.scrollTo(index);
+				listViewMessages.setItems(posts);				
 			});
 		}
 	}
