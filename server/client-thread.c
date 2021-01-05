@@ -415,7 +415,6 @@ int getPostByChannelId(ServerStatus *status, int descriptor, int size, int index
         post.userName = "0";
         post.content = "0";
         sendPost(status, &post, descriptor, index);
-        return error;
     }
     pthread_mutex_unlock(&status->descriptorMutex[index]);
     if (error != SQLITE_DONE) {
