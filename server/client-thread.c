@@ -479,6 +479,7 @@ int sendPost(Post *post, int descriptor) {
     char *response = (char *) malloc(sizeof(char) * (dataSize + dataLength + 4));
     sprintf(response, "%d;8;%d;%s;%s", dataLength, post->id, post->userName, post->content);
     error = write(descriptor, response, strlen(response) * sizeof(char));
+    perror(response);
     free(response);
     return error;
 }

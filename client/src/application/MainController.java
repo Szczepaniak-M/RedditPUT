@@ -77,7 +77,11 @@ public class MainController implements Initializable {
 			while(change.next()) {
 				if(change.wasAdded()) {
 					Channel c = change.getAddedSubList().get(0);
-					double positionY = buttons.get(buttons.size() - 1).getLayoutY() + 40;
+					double positionY;
+					if(buttons.isEmpty())
+						positionY = 260;
+					else
+						positionY = buttons.get(buttons.size() - 1).getLayoutY() + 40;
 					int positionX = 50;
 					int height = 30;
 					int width = 130;
@@ -224,12 +228,14 @@ public class MainController implements Initializable {
 	@FXML
 	public void sendBtnOnClickListener() {
 		String content = tfMessage.getText();
-		String channelName = currentChannel.getText();
-		if(!channelName.isEmpty() && !content.isEmpty())
-			synchronized (communicationContainer) {
-				communicationContainer.add("x;2;x;" + channelName + ";" + content);
-			}
-		tfMessage.setText("");
+			if(!content.isEmpty()) {
+			String channelName = currentChannel.getText();
+			if(!channelName.isEmpty() && !content.isEmpty())
+				synchronized (communicationContainer) {
+					communicationContainer.add("x;2;x;" + channelName + ";" + content);
+				}
+			tfMessage.setText("");
+		}
 	}
 
 	@FXML

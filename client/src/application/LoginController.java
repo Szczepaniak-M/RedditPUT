@@ -44,7 +44,7 @@ public class LoginController implements Initializable {
     public void loginBtnOnClickListener() throws IOException {
         System.out.println("Log In User " + tfLogin.getText() + " server address " + tfServerAddress.getText() + " port " + tfPort.getText());
         type = Type.LOGIN;
-        loginContainer.add("false");
+        loginContainer.add("error");
         Thread currentThread = Thread.currentThread();
         communicationThread = new CommunicationThread(
                 tfLogin.getText(),
@@ -58,17 +58,23 @@ public class LoginController implements Initializable {
 
         Thread t = new Thread(communicationThread);
         t.setName("Communication Thread");
+        t.setDaemon(true);
         t.start();
         try {
             synchronized (currentThread) {
                 currentThread.wait(5000);
-                if (loginContainer.get(0).equals("true")) {
-                    loginContainer.clear();
-                    redirectToMainScene();
-                } else {
-                    System.out.println("Incorrect password");
-                    loginContainer.clear();
-                }
+                synchronized (loginContainer) {
+                	if (loginContainer.get(0).equals("true")) {
+                        loginContainer.clear();
+                        redirectToMainScene();
+                    } else if(loginContainer.get(0).equals("false")){
+                    	loginContainer.clear();
+                    	System.out.println("Invalid password");
+                    } else {
+                        System.out.println("Timeout error");
+                        loginContainer.clear();
+                    }
+				}                
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -79,7 +85,7 @@ public class LoginController implements Initializable {
     public void signUpBtnOnClickListner() throws IOException {
         System.out.println("Sign Up User " + tfLogin.getText() + " server address " + tfServerAddress.getText() + " port " + tfPort.getText());
         type = Type.REGISTRATION;
-        loginContainer.add("false");
+        loginContainer.add("error");
         Thread currentThread = Thread.currentThread();
         communicationThread = new CommunicationThread(
                 tfLogin.getText(),
@@ -93,17 +99,23 @@ public class LoginController implements Initializable {
 
         Thread t = new Thread(communicationThread);
         t.setName("Communication Thread");
+        t.setDaemon(true);
         t.start();
         try {
             synchronized (currentThread) {
                 currentThread.wait(5000);
-                if (loginContainer.get(0).equals("true")) {
-                    loginContainer.clear();
-                    redirectToMainScene();
-                } else {
-                    loginContainer.clear();
-                    System.out.println("Account duplicated");
-                }
+                synchronized (loginContainer) {
+                	if (loginContainer.get(0).equals("true")) {
+                        loginContainer.clear();
+                        redirectToMainScene();
+                    } else if(loginContainer.get(0).equals("false")){
+                    	loginContainer.clear();
+                    	System.out.println("Invalid password");
+                    } else {
+                        System.out.println("Timeout error");
+                        loginContainer.clear();
+                    }
+				}
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
