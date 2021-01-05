@@ -492,38 +492,6 @@ int selectChannelIdByName(ServerStatus *status, Channel *channel) {
     return SQLITE_OK;
 }
 
-int selectChannelNameById(ServerStatus *status, Channel *channel) {
-    int error;
-    sqlite3_stmt *stmt;
-    const char *operationName = "selectChannelNameById";
-    const char *sqlStatement = "SELECT NAME FROM CHANNEL " \
-                               "WHERE ID = ? " \
-                               "LIMIT 1;";
-
-    error = sqlite3_prepare_v2(status->db, sqlStatement, -1, &stmt, NULL);
-    if (error != SQLITE_OK) {
-        prepareError(status, operationName, stmt);
-        return error;
-    }
-
-    error = sqlite3_bind_int(stmt, 1, channel->id);
-    if (error != SQLITE_OK) {
-        bindTextError(status, "CHANNEL_ID", channel->name, operationName, stmt);
-        return error;
-    }
-    error = sqlite3_step(stmt);
-    if (error == SQLITE_ROW) {
-        char *text = (char *) sqlite3_column_text(stmt, 0);
-        channel->name = (char *) malloc(sizeof(char) * (strlen(text) + 1));
-        strcpy(channel->name, text);
-    } else {
-        executeError(status, operationName, stmt);
-        return error;
-    }
-    sqlite3_finalize(stmt);
-    return SQLITE_OK;
-}
-
 int selectAllChannels(ServerStatus *status, sqlite3_stmt **stmt) {
     int error;
     const char *operationName = "selectAllChannels";

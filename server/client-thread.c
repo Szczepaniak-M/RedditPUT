@@ -168,6 +168,8 @@ int login(ServerStatus *status, int descriptor, int size, int index) {
         sendResponse(status, '1', 0, descriptor, index);
     }
 
+    pthread_mutex_lock(&status->descriptorMutex[index]);
+
     // set user id
     status->activeUsers[index].id = user.id;
 
@@ -175,7 +177,7 @@ int login(ServerStatus *status, int descriptor, int size, int index) {
     sqlite3_stmt *stmt = NULL;
     Channel channel;
     error = selectChannelsByUserId(status, user.id, &stmt);
-    pthread_mutex_lock(&status->descriptorMutex[index]);
+
     if (error == SQLITE_DONE) {
         channel.id = 0;
         channel.name = "0";
@@ -207,7 +209,6 @@ int login(ServerStatus *status, int descriptor, int size, int index) {
         return error;
     }
     sqlite3_finalize(stmt);
-    perror("Koniec");
     return 0;
 }
 
@@ -335,26 +336,12 @@ int subscribeChannel(ServerStatus *status, int descriptor, int size, int index) 
         free(content);
         return error;
     }
-
     int userId = status->activeUsers[index].id;
     int channelId = atoi(content);
     free(content);
 
     // insert data
     error = insertSubscription(status, userId, channelId);
-
-    // send new channel
-    Channel channel;
-    channel.id = channelId;
-    error = selectChannelNameById(status, &channel);
-    if (error != 0) {
-        sendResponse(status, '4', 1, descriptor, index);
-        return error;
-    }
-//    pthread_mutex_lock(&status->descriptorMutex[index]);
-//    sendChannel(&channel, '7', descriptor);
-//    pthread_mutex_unlock(&status->descriptorMutex[index]);
-    free(channel.name);
 
     // send confirmation
     if (error == 0) {
@@ -408,6 +395,7 @@ int getPostByChannelId(ServerStatus *status, int descriptor, int size, int index
         return error;
     }
     int channelId = atoi(content);
+    free(content);
 
     // get and send data
     Post post;
@@ -474,10 +462,9 @@ int sendChannel(Channel *channel, char requestType, int descriptor) {
     int channelNameSize = strlen(channel->name);
     int dataLength = channelIdSize + channelNameSize + 1;
     int dataSize = intLength(dataLength);
-    char *response = (char *) malloc(sizeof(char) * (dataSize + dataLength + 3));
+    char *response = (char *) malloc(sizeof(char) * (dataSize + dataLength + 4));
     sprintf(response, "%d;%c;%d;%s", dataLength, requestType, channel->id, channel->name);
     error = write(descriptor, response, strlen(response) * sizeof(char));
-    perror(response);
     free(response);
     return error;
 }
@@ -489,7 +476,7 @@ int sendPost(Post *post, int descriptor) {
     int contentSize = strlen(post->content);
     int dataLength = postIdSize + userNameSize + contentSize + 2;
     int dataSize = intLength(dataLength);
-    char *response = (char *) malloc(sizeof(char) * (dataSize + dataLength + 3));
+    char *response = (char *) malloc(sizeof(char) * (dataSize + dataLength + 4));
     sprintf(response, "%d;8;%d;%s;%s", dataLength, post->id, post->userName, post->content);
     error = write(descriptor, response, strlen(response) * sizeof(char));
     free(response);
@@ -503,13 +490,12 @@ int sendResponse(ServerStatus *status, char type, int fail, int descriptor, int 
     pthread_mutex_lock(&status->descriptorMutex[index]);
     error = write(descriptor, response, strlen(response) * sizeof(char));
     pthread_mutex_unlock(&status->descriptorMutex[index]);
-    perror(response);
     free(response);
     return error;
 }
 
 char *readContent(int descriptor, int size, int *error) {
-    char *content = (char *) malloc(sizeof(char) * size);
+    char *content = (char *) malloc(sizeof(char) * (size+1));
     char textBuffer[101];
     memset(textBuffer, 0, 101);
     int counter = 0;

@@ -73,60 +73,38 @@ public class MainController implements Initializable {
 			}
 		});
 		numberOfNewMsgs.add("");
-		channels.addListener(new ListChangeListener<Channel>() {
-			@Override
-			public void onChanged(Change<? extends Channel> change) {
-				while(change.next()) {
-					if(change.wasAdded()) {						
-						Channel c = change.getAddedSubList().get(0);
-						double positionY = buttons.get(buttons.size() - 1).getLayoutY() + 40;
-						int positionX = 50;
-						int height = 30;
-						int width = 130;
-						Button b = new Button();
-						b.setId(c.getName());
-						b.setLayoutX(positionX);
-						b.setLayoutY(positionY);
-						b.setPrefHeight(height);
-						b.setPrefWidth(width);
-						b.setMnemonicParsing(false);
-						b.setText(c.getName());
-						Label l = new Label();
-						l.setId(c.getName()+"-label");
-						l.setLayoutX(positionX+ + width + 10);
-						l.setLayoutY(positionY);
-						l.setPrefHeight(height);
-						l.setPrefWidth(height);
-						l.setMnemonicParsing(false);
-						l.setText(c.getObsList().get(0).toString());
-						c.getObsList().addListener(new ListChangeListener<Integer>() {
-							@Override
-							public void onChanged(Change<? extends Integer> change) {
-								while(change.next()) {
-									if(change.wasAdded()) {
-										Platform.runLater(() -> {
-											l.setText(c.getObsList().get(0).toString());
-										});										
-									}
-								}
+		channels.addListener((ListChangeListener<Channel>) change -> {
+			while(change.next()) {
+				if(change.wasAdded()) {
+					Channel c = change.getAddedSubList().get(0);
+					double positionY = buttons.get(buttons.size() - 1).getLayoutY() + 40;
+					int positionX = 50;
+					int height = 30;
+					int width = 130;
+					Button b = getButton(c, positionY, positionX, height, width);
+					Label l = getLabel(c, positionY, positionX, height, width);
+					c.getObsList().addListener((ListChangeListener<Integer>) change1 -> {
+						while(change1.next()) {
+							if(change1.wasAdded()) {
+								Platform.runLater(() -> l.setText(c.getObsList().get(0).toString()));
 							}
-						});			
-						b.setOnAction(e -> {
-							currentChannel.setText(c.getName());				
-							String requestForPosts = c.getId().length() + ";8;" + c.getId();
-							posts.clear();
-							synchronized (communicationContainer) {
-								communicationContainer.add(requestForPosts);
-							}					
-							printMessages();
-						});
-						Platform.runLater(() -> {
-							rootPane.getChildren().add(b);
-							rootPane.getChildren().add(l);
-						});	
-						buttons.add(b);
-						labels.add(l);
-					}
+						}
+					});
+					b.setOnAction(e -> {
+						currentChannel.setText(c.getName());
+						String requestForPosts = c.getId().length() + ";8;" + c.getId();
+						posts.clear();
+						synchronized (communicationContainer) {
+							communicationContainer.add(requestForPosts);
+						}
+						printMessages();
+					});
+					Platform.runLater(() -> {
+						rootPane.getChildren().add(b);
+						rootPane.getChildren().add(l);
+					});
+					buttons.add(b);
+					labels.add(l);
 				}
 			}
 		});
@@ -140,15 +118,7 @@ public class MainController implements Initializable {
 						if(names.isEmpty())
 							return;
 						Platform.runLater(() -> {
-							Dialog dialog = new ChoiceDialog(names.get(0), names);
-							dialog.setTitle("Subscribe Channel");
-							dialog.setHeaderText("Please choose channel to subscribe");
-							// KDE error: not showing dialog - fix
-							dialog.setResizable(true);
-							dialog.onShownProperty().addListener(e -> {
-								Platform.runLater(() -> dialog.setResizable(false));
-							});
-							// End of fix
+							Dialog dialog = getChoiceDialog(names, "Subscribe Channel", "Please choose channel to subscribe");
 							Optional<String> result = dialog.showAndWait();				
 							if (result.isPresent()) {
 								int index = names.indexOf(result.get());
@@ -173,15 +143,7 @@ public class MainController implements Initializable {
 
 	@FXML
 	public void btnAddChannelClickListener() {
-		Dialog dialog = new TextInputDialog();
-		dialog.setTitle("Add channel");
-		dialog.setHeaderText("Enter channel name");
-		// KDE error: not showing dialog - fix
-		dialog.setResizable(true);
-		dialog.onShownProperty().addListener(e -> {
-			Platform.runLater(() -> dialog.setResizable(false));
-		});
-		// End of fix
+		Dialog dialog = getTextDialog("Add channel", "Enter channel name");
 		Optional<String> result = dialog.showAndWait();
 		if (result.isPresent()) {
 			System.out.println(result.get());
@@ -209,15 +171,7 @@ public class MainController implements Initializable {
 		}
 		if(names.isEmpty())
 			return;
-		Dialog dialog = new ChoiceDialog(names.get(0), names);
-		dialog.setTitle("Remove Channel");
-		dialog.setHeaderText("Please choose channel to unsubscribe");
-		// KDE error: not showing dialog - fix
-		dialog.setResizable(true);
-		dialog.onShownProperty().addListener(e -> {
-			Platform.runLater(() -> dialog.setResizable(false));
-		});
-		// End of fix
+		Dialog dialog = getChoiceDialog(names, "Remove Channel", "Please choose channel to unsubscribe");
 
 		Optional<String> result = dialog.showAndWait();
 		if (result.isPresent()) {
@@ -297,31 +251,12 @@ public class MainController implements Initializable {
 		for(Channel c : channels) {
 			String channelID = c.getId();
 			String channelName = c.getName();
-			Button b = new Button();
-			b.setId(channelName);
-			b.setLayoutX(positionX);
-			b.setLayoutY(startY + shiftY);
-			b.setPrefHeight(height);
-			b.setPrefWidth(width);
-			b.setMnemonicParsing(false);
-			b.setText(channelName);
-			Label l = new Label();
-			l.setId(channelName+"-label");
-			l.setLayoutX(positionX+ + width + 10);
-			l.setLayoutY(startY + shiftY);
-			l.setPrefHeight(height);
-			l.setPrefWidth(height);
-			l.setMnemonicParsing(false);
-			l.setText(c.getObsList().get(0).toString());
-			c.getObsList().addListener(new ListChangeListener<Integer>() {
-				@Override
-				public void onChanged(Change<? extends Integer> change) {
-					while(change.next()) {
-						if(change.wasAdded()) {
-							Platform.runLater(() -> {
-								l.setText(c.getObsList().get(0).toString());
-							});
-						}
+			Button b = getButton(c,startY + shiftY, positionX, height, width);
+			Label l = getLabel(c, startY + shiftY, positionX, height, width);
+			c.getObsList().addListener((ListChangeListener<Integer>) change -> {
+				while(change.next()) {
+					if(change.wasAdded()) {
+						Platform.runLater(() -> l.setText(c.getObsList().get(0).toString()));
 					}
 				}
 			});
@@ -348,5 +283,55 @@ public class MainController implements Initializable {
 			listViewMessages.setItems(posts);
 			listViewMessages.scrollTo(index);
 		}
+	}
+
+	private Button getButton(Channel c, double positionY, int positionX, int height, int width) {
+		Button b = new Button();
+		b.setId(c.getName());
+		b.setLayoutX(positionX);
+		b.setLayoutY(positionY);
+		b.setPrefHeight(height);
+		b.setPrefWidth(width);
+		b.setMnemonicParsing(false);
+		b.setText(c.getName());
+		return b;
+	}
+
+	private Label getLabel(Channel c, double positionY, int positionX, int height, int width) {
+		Label l = new Label();
+		l.setId(c.getName() + "-label");
+		l.setLayoutX(positionX + width + 10);
+		l.setLayoutY(positionY);
+		l.setPrefHeight(height);
+		l.setPrefWidth(height);
+		l.setMnemonicParsing(false);
+		l.setText(c.getObsList().get(0).toString());
+		return l;
+	}
+
+	private Dialog getTextDialog(String title, String headerText) {
+		Dialog dialog = new TextInputDialog();
+		dialog.setTitle(title);
+		dialog.setHeaderText(headerText);
+		// KDE error: not showing dialog - fix
+		dialog.setResizable(true);
+		dialog.onShownProperty().addListener(e -> {
+			Platform.runLater(() -> dialog.setResizable(false));
+		});
+		// End of fix
+		return dialog;
+	}
+
+	private Dialog getChoiceDialog(List<String> names, String s, String s2) {
+		Dialog dialog = new ChoiceDialog(names.get(0), names);
+		dialog.setTitle(s);
+		dialog.setHeaderText(s2);
+		// KDE error: not showing dialog - fix
+		dialog.setResizable(true);
+		dialog.onShownProperty().addListener(e -> {
+			Platform.runLater(() -> dialog.setResizable(false));
+		});
+		// End of fix
+		return dialog;
 	}
 }
