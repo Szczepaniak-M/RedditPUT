@@ -433,7 +433,7 @@ public class CommunicationThread implements Runnable {
             }
         }
         if(!subscribed) {
-        	tmp.add(channelName);
+        	tmp.add(msg);
         }
         readRestAvailableChannels(tmp, reader);
     }
