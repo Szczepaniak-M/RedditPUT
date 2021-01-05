@@ -30,9 +30,9 @@ int getAllChannels(ServerStatus *status, int descriptor, int index);
 
 int sendNotice(ServerStatus *status, int channelId, int descriptor, int index);
 
-int sendChannel(Channel *channel, char requestType, int descriptor);
+int sendChannel(ServerStatus *status, Channel *channel, char requestType, int descriptor, int index);
 
-int sendPost(Post *post, int descriptor);
+int sendPost(ServerStatus *status, Post *post, int descriptor, int index);
 
 int sendResponse(ServerStatus *status, char type, int fail, int descriptor, int index);
 

@@ -178,16 +178,17 @@ int login(ServerStatus *status, int descriptor, int size, int index) {
     Channel channel;
     error = selectChannelsByUserId(status, user.id, &stmt);
 
-    if (error == SQLITE_DONE) {
-        channel.id = 0;
-        channel.name = "0";
-        sendChannel(&channel, '7', descriptor);
-    }
+
     while (error == SQLITE_ROW) {
         channel.id = sqlite3_column_int(stmt, 0);
         channel.name = (char *) sqlite3_column_text(stmt, 1);
-        sendChannel(&channel, '7', descriptor);
+        sendChannel(status, &channel, '7', descriptor, index);
         error = sqlite3_step(stmt);
+    }
+    if (error == SQLITE_DONE) {
+        channel.id = 0;
+        channel.name = "0";
+        sendChannel(status, &channel, '7', descriptor, index);
     }
     pthread_mutex_unlock(&status->descriptorMutex[index]);
     if (error != SQLITE_DONE) {
@@ -321,7 +322,7 @@ int addChannel(ServerStatus *status, int descriptor, int size, int index) {
         sendResponse(status, '3', 1, descriptor, index);
     }
     pthread_mutex_lock(&status->descriptorMutex[index]);
-    sendChannel(&channel, '7', descriptor);
+    sendChannel(status, &channel, '7', descriptor, index);
     pthread_mutex_unlock(&status->descriptorMutex[index]);
     free(content);
     return error;
@@ -406,7 +407,7 @@ int getPostByChannelId(ServerStatus *status, int descriptor, int size, int index
         post.id = sqlite3_column_int(stmt, 0);
         post.userName = (char *) sqlite3_column_text(stmt, 1);
         post.content = (char *) sqlite3_column_text(stmt, 2);
-        sendPost(&post, descriptor);
+        sendPost(status, &post, descriptor, index);
         error = sqlite3_step(stmt);
     }
     pthread_mutex_unlock(&status->descriptorMutex[index]);
@@ -426,13 +427,19 @@ int getAllChannels(ServerStatus *status, int descriptor, int index) {
     Channel channel;
     sqlite3_stmt *stmt = NULL;
 
+    // get and send all channels
     error = selectAllChannels(status, &stmt);
     pthread_mutex_lock(&status->descriptorMutex[index]);
     while (error == SQLITE_ROW) {
         channel.id = sqlite3_column_int(stmt, 0);
         channel.name = (char *) sqlite3_column_text(stmt, 1);
-        sendChannel(&channel, '9', descriptor);
+        sendChannel(status, &channel, '9', descriptor, index);
         error = sqlite3_step(stmt);
+    }
+    if (error == SQLITE_DONE) {
+        channel.id = 0;
+        channel.name = "0";
+        sendChannel(status, &channel, '9', descriptor, index);
     }
     pthread_mutex_unlock(&status->descriptorMutex[index]);
     if (error != SQLITE_DONE) {
@@ -452,11 +459,15 @@ int sendNotice(ServerStatus *status, int channelId, int descriptor, int index) {
     pthread_mutex_lock(&status->descriptorMutex[index]);
     error = write(descriptor, response, strlen(response) * sizeof(char));
     pthread_mutex_unlock(&status->descriptorMutex[index]);
+    if (error < 0) {
+        fprintf(stderr, "%s: Error during sending Notice %s to user with ID %d: %d\n",
+                status->programName, response, status->activeUsers[index].id, error);
+    }
     free(response);
     return error;
 }
 
-int sendChannel(Channel *channel, char requestType, int descriptor) {
+int sendChannel(ServerStatus *status, Channel *channel, char requestType, int descriptor, int index) {
     int error;
     int channelIdSize = intLength(channel->id);
     int channelNameSize = strlen(channel->name);
@@ -465,11 +476,15 @@ int sendChannel(Channel *channel, char requestType, int descriptor) {
     char *response = (char *) malloc(sizeof(char) * (dataSize + dataLength + 4));
     sprintf(response, "%d;%c;%d;%s", dataLength, requestType, channel->id, channel->name);
     error = write(descriptor, response, strlen(response) * sizeof(char));
+    if (error < 0) {
+        fprintf(stderr, "%s: Error during sending Channel %s to user with ID %d: %d\n",
+                status->programName, response, status->activeUsers[index].id, error);
+    }
     free(response);
     return error;
 }
 
-int sendPost(Post *post, int descriptor) {
+int sendPost(ServerStatus *status, Post *post, int descriptor, int index) {
     int error;
     int postIdSize = intLength(post->id);
     int userNameSize = strlen(post->userName);
@@ -479,7 +494,10 @@ int sendPost(Post *post, int descriptor) {
     char *response = (char *) malloc(sizeof(char) * (dataSize + dataLength + 4));
     sprintf(response, "%d;8;%d;%s;%s", dataLength, post->id, post->userName, post->content);
     error = write(descriptor, response, strlen(response) * sizeof(char));
-    perror(response);
+    if (error < 0) {
+        fprintf(stderr, "%s: Error during sending Response %s to user with ID %d: %d\n",
+                status->programName, response, status->activeUsers[index].id, error);
+    }
     free(response);
     return error;
 }
@@ -491,6 +509,10 @@ int sendResponse(ServerStatus *status, char type, int fail, int descriptor, int 
     pthread_mutex_lock(&status->descriptorMutex[index]);
     error = write(descriptor, response, strlen(response) * sizeof(char));
     pthread_mutex_unlock(&status->descriptorMutex[index]);
+    if (error < 0) {
+        fprintf(stderr, "%s: Error during sending Response %s to user with ID %d: %d\n",
+                status->programName, response, status->activeUsers[index].id, error);
+    }
     free(response);
     return error;
 }
