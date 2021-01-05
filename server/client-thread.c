@@ -178,16 +178,17 @@ int login(ServerStatus *status, int descriptor, int size, int index) {
     Channel channel;
     error = selectChannelsByUserId(status, user.id, &stmt);
 
-    if (error == SQLITE_DONE) {
-        channel.id = 0;
-        channel.name = "0";
-        sendChannel(&channel, '7', descriptor);
-    }
+
     while (error == SQLITE_ROW) {
         channel.id = sqlite3_column_int(stmt, 0);
         channel.name = (char *) sqlite3_column_text(stmt, 1);
         sendChannel(&channel, '7', descriptor);
         error = sqlite3_step(stmt);
+    }
+    if (error == SQLITE_DONE) {
+        channel.id = 0;
+        channel.name = "0";
+        sendChannel(&channel, '7', descriptor);
     }
     pthread_mutex_unlock(&status->descriptorMutex[index]);
     if (error != SQLITE_DONE) {
@@ -433,6 +434,11 @@ int getAllChannels(ServerStatus *status, int descriptor, int index) {
         channel.name = (char *) sqlite3_column_text(stmt, 1);
         sendChannel(&channel, '9', descriptor);
         error = sqlite3_step(stmt);
+    }
+    if (error == SQLITE_DONE) {
+        channel.id = 0;
+        channel.name = "0";
+        sendChannel(&channel, '9', descriptor);
     }
     pthread_mutex_unlock(&status->descriptorMutex[index]);
     if (error != SQLITE_DONE) {
