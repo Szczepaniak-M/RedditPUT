@@ -17,10 +17,10 @@ public class Main extends Application {
     @Override
     public void start(Stage primaryStage) throws IOException {
         System.out.println("Welcome to RedditPUT");
-        Parent root = FXMLLoader.load(getClass().getResource("LoginWindow.fxml"));
+        Parent root = FXMLLoader.load(getClass().getResource("../LoginWindow.fxml"));
         primaryStage.setTitle("RedditPUT");
         Scene scene = new Scene(root, 800, 680);
-        scene.getStylesheets().add("application/style.css");
+        scene.getStylesheets().add("style.css");
         primaryStage.setScene(scene);
         primaryStage.show();
     }

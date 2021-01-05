@@ -128,7 +128,7 @@ public class LoginController implements Initializable {
     public void redirectToMainScene() throws IOException {
         //pass references to another controller
         MainController mainController = new MainController();
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("MainWindow.fxml"));
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("../MainWindow.fxml"));
         mainController.initData(communicationThread, communicationContainer);
         loader.setController(mainController);
 

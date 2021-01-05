@@ -268,7 +268,7 @@ public class MainController implements Initializable {
 		communicationContainer.add(";logout;");
 		System.out.println("Log Out");
 		//load login scene
-    	Pane pane = FXMLLoader.load(getClass().getResource("LoginWindow.fxml"));
+    	Pane pane = FXMLLoader.load(getClass().getResource("../../resources/LoginWindow.fxml"));
     	rootPane.getChildren().setAll(pane);
 	}
 
