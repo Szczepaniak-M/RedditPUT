@@ -14,6 +14,8 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceDialog;
 import javafx.scene.control.Dialog;
@@ -51,6 +53,7 @@ public class MainController implements Initializable {
 	private List<Button> buttons = new ArrayList<>();
 	private List<Label> labels = new ArrayList<>();
 	private ObservableList<String> availableChannels;
+	private ObservableList<String> errors = FXCollections.synchronizedObservableList(FXCollections.observableArrayList(new ArrayList<>()));
 
 	@Override
 	public void initialize(URL arg0, ResourceBundle arg1) {
@@ -118,9 +121,17 @@ public class MainController implements Initializable {
 				while(change.next()) {
 					if(change.wasAdded()) {
 						List<String> names = new ArrayList<>();
-						availableChannels.forEach(c -> names.add(c.split(";")[1]));
-						if(names.isEmpty())
+						List<String> ids = new ArrayList<>();
+						availableChannels.forEach(c -> {
+								ids.add(c.split(";")[0]);
+								names.add(c.split(";")[1]);
+							});
+						if(ids.size() == 1 && ids.get(0).equals("0")) {
+							Platform.runLater(() -> {
+								createAlertDialog(AlertType.INFORMATION, "Information Dialolg", "Info", "There is no possible channel to subscribe");
+							});
 							return;
+						}
 						Platform.runLater(() -> {
 							Dialog dialog = getChoiceDialog(names, "Subscribe Channel", "Please choose channel to subscribe");
 							Optional<String> result = dialog.showAndWait();				
@@ -137,12 +148,30 @@ public class MainController implements Initializable {
 				}
 			}
 		});
+		errors.addListener(new ListChangeListener<String>() {
+			@Override
+			public void onChanged(Change<? extends String> change) {
+				synchronized (errors) {
+					while(change.next()) {
+						if(change.wasAdded()) {
+							String errorHeader = change.getAddedSubList().get(0);
+							String errorContent = change.getAddedSubList().get(1);
+							System.err.println(errorHeader + ": " + errorContent);
+							Platform.runLater(() -> {
+								createAlertDialog(AlertType.ERROR, "Error dialog", errorHeader, errorContent);
+							});								
+							errors.clear();
+						}
+					}
+				}								
+			}
+		});
 	}
 
 	public void initData(CommunicationThread communicationThread, List<String> communicationContainer) {
 		this.communicationThread = communicationThread;
 		this.communicationContainer = communicationContainer;
-		communicationThread.setObservables(posts, numberOfNewMsgs);
+		communicationThread.setObservables(posts, numberOfNewMsgs, errors);
 	}
 
 	@FXML
@@ -173,8 +202,12 @@ public class MainController implements Initializable {
 		for(Channel c : channels) {
 			names.add(c.getName());
 		}
-		if(names.isEmpty())
+		if(names.isEmpty())	{
+			Platform.runLater(() -> {
+				createAlertDialog(AlertType.INFORMATION, "Information Dialolg", "Info", "There is no possible channel to unsubscribe");
+			});
 			return;
+		}
 		Dialog dialog = getChoiceDialog(names, "Remove Channel", "Please choose channel to unsubscribe");
 
 		Optional<String> result = dialog.showAndWait();
@@ -240,12 +273,16 @@ public class MainController implements Initializable {
 
 	@FXML
 	public void btnLoadMsgsListener() {
-		String requestForNewMsgs = ";n;";
-		posts.clear();
-		synchronized (communicationContainer) {
-			communicationContainer.add(requestForNewMsgs);
+		if(currentChannel.getText().equals("")) {
+			System.out.println("Can't load messages from empty channel");
+		} else {
+			String requestForNewMsgs = ";n;";
+			posts.clear();
+			synchronized (communicationContainer) {
+				communicationContainer.add(requestForNewMsgs);
+			}
+			printMessages();
 		}
-		printMessages();
 	}
 
 	private void generateChannelButtons(List<Channel> channels) {
@@ -341,5 +378,14 @@ public class MainController implements Initializable {
 		});
 		// End of fix
 		return dialog;
+	}
+	
+	private void createAlertDialog(AlertType type, String title, String header, String content) {
+		Alert alert = new Alert(type);
+		alert.setTitle(title);
+		alert.setHeaderText(header);
+		alert.setContentText(content);
+
+		alert.showAndWait();
 	}
 }

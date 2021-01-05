@@ -1,19 +1,21 @@
 package application;
 
-import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
-import javafx.fxml.Initializable;
-import javafx.scene.control.Button;
-import javafx.scene.control.TextField;
-import javafx.scene.layout.Pane;
-import javafx.stage.WindowEvent;
-
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.ResourceBundle;
+
+import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.fxml.Initializable;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.Button;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.Pane;
+import javafx.stage.WindowEvent;
 
 public class LoginController implements Initializable {
     @FXML
@@ -34,7 +36,7 @@ public class LoginController implements Initializable {
     private List<String> communicationContainer = Collections.synchronizedList(new ArrayList<>());
     private List<String> loginContainer = Collections.synchronizedList(new ArrayList<>());
     private Type type;
-    private CommunicationThread communicationThread;
+    private CommunicationThread communicationThread;    
 
     @Override
     public void initialize(URL arg0, ResourceBundle arg1) {
@@ -69,10 +71,10 @@ public class LoginController implements Initializable {
                         redirectToMainScene();
                     } else if(loginContainer.get(0).equals("false")){
                     	loginContainer.clear();
-                    	System.out.println("Invalid password");
-                    } else {
-                        System.out.println("Timeout error");
+                    	createErrorDialog("Invalid login or password");
+                    } else {                        
                         loginContainer.clear();
+                        createErrorDialog("Server didn't answer");
                     }
 				}                
             }
@@ -110,10 +112,10 @@ public class LoginController implements Initializable {
                         redirectToMainScene();
                     } else if(loginContainer.get(0).equals("false")){
                     	loginContainer.clear();
-                    	System.out.println("Invalid password");
-                    } else {
-                        System.out.println("Timeout error");
+                    	createErrorDialog("Account duplicated");
+                    } else {                        
                         loginContainer.clear();
+                        createErrorDialog("Server didn't answer");
                     }
 				}
             }
@@ -139,4 +141,13 @@ public class LoginController implements Initializable {
         System.out.println("Close application");
         communicationContainer.add(";logout;");
     }
+    
+    private void createErrorDialog(String content) {
+		Alert alert = new Alert(AlertType.ERROR);
+		alert.setTitle("Error dialog");
+		alert.setHeaderText("Error");
+		alert.setContentText(content);
+
+		alert.showAndWait();
+	}
 }
