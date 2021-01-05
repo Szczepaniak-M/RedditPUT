@@ -56,7 +56,6 @@ void *clientThread(void *inputData) {
             break;
         }
     }
-    perror("Koniec");
     pthread_mutex_lock(&status->activeUsersMutex);
     status->activeUsers[index].descriptor = -1;
     status->activeUsers[index].id = -1;
@@ -260,11 +259,6 @@ int addPost(ServerStatus *status, int descriptor, int size, int index) {
         return error;
     }
     error = selectUsersByChannelId(status, post.channelId, &stmt);
-    perror("Send");
-    for (int i = 0; i < 5; ++i) {
-        fprintf(stderr, "%d, %d\n",
-                status->activeUsers[i].id, status->activeUsers[i].descriptor);
-    }
     while (error == SQLITE_ROW) {
         userId = sqlite3_column_int(stmt, 0);
         // insert notification

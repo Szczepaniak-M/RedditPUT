@@ -65,11 +65,6 @@ void *connectionHandler(void *data) {
                 break;
             }
         }
-        perror("server");
-        for (int i = 0; i < 5; ++i) {
-            fprintf(stderr, "%d, %d\n",
-                    status->activeUsers[i].id, status->activeUsers[i].descriptor);
-        }
 
         if (success) {
             handleConnection(status, i);

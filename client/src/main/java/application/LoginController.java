@@ -47,85 +47,69 @@ public class LoginController implements Initializable {
     public void loginBtnOnClickListener() throws IOException {
         System.out.println("Log In User " + tfLogin.getText() + " server address " + tfServerAddress.getText() + " port " + tfPort.getText());
         type = Type.LOGIN;
-        loginContainer.add("error");
-        Thread currentThread = Thread.currentThread();
-        communicationThread = new CommunicationThread(
-                tfLogin.getText(),
-                tfPassword.getText(),
-                tfServerAddress.getText(),
-                Integer.valueOf(tfPort.getText()),
-                currentThread,
-                loginContainer,
-                type,
-                communicationContainer);
-
-        Thread t = new Thread(communicationThread);
-        t.setName("Communication Thread");
-        t.setDaemon(true);
-        t.start();
-        try {
-            synchronized (currentThread) {
-                currentThread.wait(5000);
-                synchronized (loginContainer) {
-                	if (loginContainer.get(0).equals("true")) {
-                        loginContainer.clear();
-                        redirectToMainScene();
-                    } else if(loginContainer.get(0).equals("false")){
-                    	loginContainer.clear();
-                    	createErrorDialog("Invalid login or password");
-                    } else {                        
-                        loginContainer.clear();
-                        createErrorDialog("Server didn't answer");
-                    }
-				}                
-            }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        createCommunicationThread("Invalid login or password");
     }
 
     @FXML
-    public void signUpBtnOnClickListner() throws IOException {
+    public void signUpBtnOnClickListener() throws IOException {
         System.out.println("Sign Up User " + tfLogin.getText() + " server address " + tfServerAddress.getText() + " port " + tfPort.getText());
         type = Type.REGISTRATION;
-        loginContainer.add("error");
-        Thread currentThread = Thread.currentThread();
-        communicationThread = new CommunicationThread(
-                tfLogin.getText(),
-                tfPassword.getText(),
-                tfServerAddress.getText(),
-                Integer.valueOf(tfPort.getText()),
-                currentThread,
-                loginContainer,
-                type,
-                communicationContainer);
-
-        Thread t = new Thread(communicationThread);
-        t.setName("Communication Thread");
-        t.setDaemon(true);
-        t.start();
-        try {
-            synchronized (currentThread) {
-                currentThread.wait(5000);
-                synchronized (loginContainer) {
-                	if (loginContainer.get(0).equals("true")) {
-                        loginContainer.clear();
-                        redirectToMainScene();
-                    } else if(loginContainer.get(0).equals("false")){
-                    	loginContainer.clear();
-                    	createErrorDialog("Account duplicated");
-                    } else {                        
-                        loginContainer.clear();
-                        createErrorDialog("Server didn't answer");
-                    }
-				}
-            }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        createCommunicationThread("Account duplicated");
     }
 
-    public void redirectToMainScene() throws IOException {
+    private void createCommunicationThread(String s) throws IOException {
+        if (!tfPort.getText().matches("[0-9]+")) {
+            createErrorDialog("Port must contain only numbers");
+            return;
+        } else if (!tfLogin.getText().matches("[a-zA-Z0-9!@#$%&*()_+=|<>?{}\\\\[\\\\]~-]+")) {
+            createErrorDialog("Login must contain only latin characters, numbers or special characters");
+            return;
+        } else if (!tfPassword.getText().matches("[a-zA-Z0-9!@#$%&*()_+=|<>?{}\\\\[\\\\]~-]+")) {
+            createErrorDialog("Password must contain only latin characters, numbers or special characters");
+            return;
+        }else if (!tfServerAddress.getText().matches("[a-zA-Z0-9!@#$%&*()_+=|<>?{}\\\\[\\\\]~-]+")) {
+            createErrorDialog("Server Address must contain only latin characters, numbers or special characters");
+            return;
+        }
+            loginContainer.add("error");
+            Thread currentThread = Thread.currentThread();
+            communicationThread = new CommunicationThread(
+                    tfLogin.getText(),
+                    tfPassword.getText(),
+                    tfServerAddress.getText(),
+                    Integer.valueOf(tfPort.getText()),
+                    currentThread,
+                    loginContainer,
+                    type,
+                    communicationContainer);
+
+            Thread t = new Thread(communicationThread);
+            t.setName("Communication Thread");
+            t.setDaemon(true);
+            t.start();
+            try {
+                synchronized (currentThread) {
+                    currentThread.wait(5000);
+                    synchronized (loginContainer) {
+                        if (loginContainer.get(0).equals("true")) {
+                            loginContainer.clear();
+                            redirectToMainScene();
+                        } else if (loginContainer.get(0).equals("false")) {
+                            loginContainer.clear();
+                            createErrorDialog(s);
+                        } else {
+                            loginContainer.clear();
+                            createErrorDialog("Server didn't answer");
+                        }
+                    }
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+    }
+
+    private void redirectToMainScene() throws IOException {
         //pass references to another controller
         MainController mainController = new MainController();
         FXMLLoader loader = new FXMLLoader(getClass().getResource("../MainWindow.fxml"));

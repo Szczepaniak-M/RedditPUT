@@ -11,6 +11,6 @@
       <TextField fx:id="tfServerAddress" layoutX="250.0" layoutY="310.0" prefHeight="50.0" prefWidth="300.0" promptText="Server address" />
       <TextField fx:id="tfPort" layoutX="250.0" layoutY="390.0" prefHeight="50.0" prefWidth="300.0" promptText="Port" />
       <Button fx:id="btnLogIn" layoutX="450.0" layoutY="470.0" onAction="#loginBtnOnClickListener" prefHeight="50.0" prefWidth="100.0" text="Log In" />
-      <Button fx:id="btnSignUp" layoutX="250.0" layoutY="470.0" onAction="#signUpBtnOnClickListner" mnemonicParsing="false" prefHeight="50.0" prefWidth="100.0" text="Sign Up" />
+      <Button fx:id="btnSignUp" layoutX="250.0" layoutY="470.0" onAction="#signUpBtnOnClickListener" mnemonicParsing="false" prefHeight="50.0" prefWidth="100.0" text="Sign Up" />
    </children>
 </Pane>
