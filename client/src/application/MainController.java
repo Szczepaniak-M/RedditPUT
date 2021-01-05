@@ -49,6 +49,7 @@ public class MainController implements Initializable {
 	private ObservableList<String> numberOfNewMsgs = FXCollections.synchronizedObservableList(FXCollections.observableArrayList(new ArrayList<String>()));
 	private ObservableList<Channel> channels;
 	private List<Button> buttons = new ArrayList<>();
+	private List<Label> labels = new ArrayList<>();
 	private ObservableList<String> availableChannels;
 
 	@Override
@@ -89,14 +90,22 @@ public class MainController implements Initializable {
 						b.setPrefHeight(height);
 						b.setPrefWidth(width);
 						b.setMnemonicParsing(false);
-						b.setText(c.getName() + " | [" + c.getObsList().get(0) + "]");
+						b.setText(c.getName());
+						Label l = new Label();
+						l.setId(c.getName()+"-label");
+						l.setLayoutX(positionX+ + width + 10);
+						l.setLayoutY(positionY);
+						l.setPrefHeight(height);
+						l.setPrefWidth(height);
+						l.setMnemonicParsing(false);
+						l.setText(c.getObsList().get(0).toString());
 						c.getObsList().addListener(new ListChangeListener<Integer>() {
 							@Override
 							public void onChanged(Change<? extends Integer> change) {
 								while(change.next()) {
 									if(change.wasAdded()) {
 										Platform.runLater(() -> {
-											b.setText(c.getName() + " | [" + c.getObsList().get(0) + "]");
+											l.setText(c.getObsList().get(0).toString());
 										});										
 									}
 								}
@@ -113,8 +122,10 @@ public class MainController implements Initializable {
 						});
 						Platform.runLater(() -> {
 							rootPane.getChildren().add(b);
+							rootPane.getChildren().add(l);
 						});	
 						buttons.add(b);
+						labels.add(l);
 					}
 				}
 			}
@@ -218,13 +229,22 @@ public class MainController implements Initializable {
 					break;
 				}
 			}
+			for(Label l : labels) {
+				if(l.getId().equals(result.get()+"-label")) {
+					rootPane.getChildren().remove(l);
+					break;
+				}
+			}
 			for(int i = 0; i < buttons.size(); i++) {
 				if(i > index) {
 					Button btn = buttons.get(i);
 					btn.setLayoutY(btn.getLayoutY() - 40);
+					Label lbl = labels.get(i);
+					lbl.setLayoutY(lbl.getLayoutY() - 40);
 				}
 			}
 			buttons.remove(index);
+			labels.remove(index);
 			for(Channel c : channels) {
 				if(c.getName().equals(result.get() )) {
 					String request = c.getId().length() + ";5;" + c.getId();
@@ -317,6 +337,7 @@ public class MainController implements Initializable {
 			rootPane.getChildren().add(b);
 			rootPane.getChildren().add(l);
 			buttons.add(b);
+			labels.add(l);
 			shiftY += 40;
 		}
 	}
