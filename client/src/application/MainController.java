@@ -397,7 +397,12 @@ public class MainController implements Initializable {
 		alert.setTitle(title);
 		alert.setHeaderText(header);
 		alert.setContentText(content);
-
+		// KDE error: not showing dialog - fix
+		alert.setResizable(true);
+		alert.onShownProperty().addListener(e -> {
+			Platform.runLater(() -> alert.setResizable(false));
+		});
+		// End of fix
 		alert.showAndWait();
 	}
 }

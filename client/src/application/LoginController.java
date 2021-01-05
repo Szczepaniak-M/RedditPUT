@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.ResourceBundle;
 
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
@@ -147,7 +148,12 @@ public class LoginController implements Initializable {
 		alert.setTitle("Error dialog");
 		alert.setHeaderText("Error");
 		alert.setContentText(content);
-
+        // KDE error: not showing dialog - fix
+        alert.setResizable(true);
+        alert.onShownProperty().addListener(e -> {
+            Platform.runLater(() -> alert.setResizable(false));
+        });
+        // End of fix
 		alert.showAndWait();
 	}
 }

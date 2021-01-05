@@ -16,6 +16,7 @@ int main(int argc, char *argv[]) {
     status.serverPort = atoi(argv[1]);
     for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
         status.activeUsers[i].descriptor = -1;
+        status.activeUsers[i].id = -1;
         status.pthreads[i].isInitialized = 0;
         error = pthread_mutex_init(&status.descriptorMutex[i], NULL);
         if ( error != 0) {

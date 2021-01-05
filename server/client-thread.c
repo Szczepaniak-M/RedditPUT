@@ -56,9 +56,10 @@ void *clientThread(void *inputData) {
             break;
         }
     }
-
+    perror("Koniec");
     pthread_mutex_lock(&status->activeUsersMutex);
     status->activeUsers[index].descriptor = -1;
+    status->activeUsers[index].id = -1;
     if (status->isCleaning == 0) {
         status->pthreads[index].isInitialized = 0;
         pthread_detach(pthread_self());
@@ -259,6 +260,11 @@ int addPost(ServerStatus *status, int descriptor, int size, int index) {
         return error;
     }
     error = selectUsersByChannelId(status, post.channelId, &stmt);
+    perror("Send");
+    for (int i = 0; i < 5; ++i) {
+        fprintf(stderr, "%d, %d\n",
+                status->activeUsers[i].id, status->activeUsers[i].descriptor);
+    }
     while (error == SQLITE_ROW) {
         userId = sqlite3_column_int(stmt, 0);
         // insert notification
@@ -274,7 +280,7 @@ int addPost(ServerStatus *status, int descriptor, int size, int index) {
                 if (descriptor == status->activeUsers[i].descriptor) {
                     break;
                 } else {
-                    error = sendNotice(status, post.channelId, status->activeUsers[i].descriptor, index);
+                    error = sendNotice(status, post.channelId, status->activeUsers[i].descriptor, i);
                     if (error != 0) {
                         pthread_mutex_unlock(&status->activeUsersMutex);
                         sqlite3_finalize(stmt);
@@ -503,8 +509,8 @@ int sendNotice(ServerStatus *status, int channelId, int descriptor, int index) {
     error = write(descriptor, response, strlen(response) * sizeof(char));
     pthread_mutex_unlock(&status->descriptorMutex[index]);
     if (error < 0) {
-        fprintf(stderr, "%s: Error during sending Notice %s to user with ID %d: %d\n",
-                status->programName, response, status->activeUsers[index].id, error);
+        fprintf(stderr, "%s: Error during sending Notice %s to user %d with ID %d: %d\n",
+                status->programName, response, descriptor, status->activeUsers[index].id, error);
         free(response);
         return error;
     }
