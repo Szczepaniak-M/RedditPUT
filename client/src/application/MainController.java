@@ -14,8 +14,6 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceDialog;
 import javafx.scene.control.Dialog;
@@ -44,7 +42,7 @@ public class MainController implements Initializable {
 	private TextField tfMessage;
 	@FXML
 	private ListView<String> listViewMessages;
-	
+
 	private List<String> communicationContainer;
 	private CommunicationThread communicationThread;
 	private ObservableList<String> posts = FXCollections.synchronizedObservableList(FXCollections.observableArrayList(new ArrayList<String>()));
@@ -52,24 +50,24 @@ public class MainController implements Initializable {
 	private ObservableList<Channel> channels;
 	private List<Button> buttons = new ArrayList<>();
 	private ObservableList<String> availableChannels;
-	
+
 	@Override
 	public void initialize(URL arg0, ResourceBundle arg1) {
 		channels = communicationThread.getChannels();
 		availableChannels = communicationThread.getAvailableChannels();
 		generateChannelButtons(channels);
-		communicationContainer.clear();				
+		communicationContainer.clear();
 		numberOfNewMsgs.addListener(new ListChangeListener<String>() {
 			@Override
-			public void onChanged(Change<? extends String> change) {				
+			public void onChanged(Change<? extends String> change) {
 				while(change.next()) {
 					if(change.wasAdded()) {
 						synchronized (numberOfNewMsgs) {
 							Platform.runLater(() -> {
 								btnLoadMsgs.setText("Load " + numberOfNewMsgs.get(0) + " new messages");
 							});
-						}						
-					}									
+						}
+					}
 				}
 			}
 		});
@@ -155,13 +153,13 @@ public class MainController implements Initializable {
 			}
 		});
 	}
-	
+
 	public void initData(CommunicationThread communicationThread, List<String> communicationContainer) {
 		this.communicationThread = communicationThread;
 		this.communicationContainer = communicationContainer;
-		communicationThread.setObservables(posts, numberOfNewMsgs);		        
+		communicationThread.setObservables(posts, numberOfNewMsgs);
 	}
-	
+
 	@FXML
 	public void btnAddChannelClickListener() {
 		Dialog dialog = new TextInputDialog();
@@ -174,7 +172,7 @@ public class MainController implements Initializable {
 		});
 		// End of fix
 		Optional<String> result = dialog.showAndWait();
-		if (result.isPresent()) {		
+		if (result.isPresent()) {
 			System.out.println(result.get());
 			if(!result.get().equals("")) {
 			    String request = result.get().length() + ";3;" + result.get();
@@ -184,7 +182,7 @@ public class MainController implements Initializable {
 			}
 		}
 	}
-	
+
 	@FXML
 	public void btnSubscribeChannelClickListener() {
 		synchronized (communicationContainer) {
@@ -210,7 +208,7 @@ public class MainController implements Initializable {
 		});
 		// End of fix
 
-		Optional<String> result = dialog.showAndWait();				
+		Optional<String> result = dialog.showAndWait();
 		if (result.isPresent()) {
 			int index = -1;
 			for(Button b : buttons) {
@@ -219,7 +217,7 @@ public class MainController implements Initializable {
 					rootPane.getChildren().remove(b);
 					break;
 				}
-			}		
+			}
 			for(int i = 0; i < buttons.size(); i++) {
 				if(i > index) {
 					Button btn = buttons.get(i);
@@ -235,41 +233,41 @@ public class MainController implements Initializable {
 					}
 					channels.remove(c);
 					break;
-				}				
+				}
 			}
-		}		
+		}
 	}
-	
+
 	@FXML
 	public void logoutBtnOnClickListener() throws IOException {
 		communicationContainer.add(";logout;");
 		System.out.println("Log Out");
 		//load login scene
     	Pane pane = FXMLLoader.load(getClass().getResource("LoginWindow.fxml"));
-    	rootPane.getChildren().setAll(pane);    	
+    	rootPane.getChildren().setAll(pane);
 	}
-	
+
 	@FXML
 	public void sendBtnOnClickListener() {
 		String content = tfMessage.getText();
 		String channelName = currentChannel.getText();
-		if(!channelName.isEmpty() && !content.isEmpty()) 
+		if(!channelName.isEmpty() && !content.isEmpty())
 			synchronized (communicationContainer) {
 				communicationContainer.add("x;2;x;" + channelName + ";" + content);
 			}
 		tfMessage.setText("");
 	}
-	
+
 	@FXML
 	public void btnLoadMsgsListener() {
 		String requestForNewMsgs = ";n;";
 		posts.clear();
 		synchronized (communicationContainer) {
 			communicationContainer.add(requestForNewMsgs);
-		}					
+		}
 		printMessages();
 	}
-	
+
 	private void generateChannelButtons(List<Channel> channels) {
 		int startY = 260;
 		int shiftY = 0;
@@ -308,12 +306,12 @@ public class MainController implements Initializable {
 				}
 			});
 			b.setOnAction(e -> {
-				currentChannel.setText(channelName);				
+				currentChannel.setText(channelName);
 				String requestForPosts = channelID.length() + ";8;" + channelID;
 				posts.clear();
 				synchronized (communicationContainer) {
 					communicationContainer.add(requestForPosts);
-				}					
+				}
 				printMessages();
 			});
 			rootPane.getChildren().add(b);
@@ -322,7 +320,7 @@ public class MainController implements Initializable {
 			shiftY += 40;
 		}
 	}
-	
+
 	private void printMessages() {
 		synchronized (posts) {
 			int index = posts.size();

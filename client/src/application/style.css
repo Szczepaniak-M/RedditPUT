@@ -1,11 +1,18 @@
-label {
-    -fx-background-color: white;
+.label {
+    -fx-alignment: center;
+    -fx-background-color: #a4a4a4;
+    -fx-content-display: center;
+    -fx-text-alignment: center;
+    -fx-background-radius: 15px;
 }
 
 #currentChannel {
-    -fx-border-color: red;
+    -fx-background-color: #a4a4a4;
+    -fx-font-size: 16px;
+    -fx-background-radius: 3px;
 }
 
 #lblCanals {
-    -fx-border-color: blue;
+    -fx-background-color: #a4a4a4;
+    -fx-background-radius: 3px;
 }
