@@ -74,7 +74,7 @@ int signUp(ServerStatus *status, int descriptor, int size, int index) {
     User user;
 
     // transform data
-    char *content = readContent(descriptor, size, &error);
+    char *content = readContent(status, descriptor, size, &error);
     if (error == -1) {
         free(content);
         return error;
@@ -124,19 +124,15 @@ int signUp(ServerStatus *status, int descriptor, int size, int index) {
     status->activeUsers[index].id = user.id;
 
     // send confirmation
-    if (error == 0) {
-        sendResponse(status, '0', 0, descriptor, index);
-    } else {
-        sendResponse(status, '0', 1, descriptor, index);
-    }
-    return 0;
+    error = sendResponse(status, '0', 0, descriptor, index);
+    return error;
 }
 
 int login(ServerStatus *status, int descriptor, int size, int index) {
     User user;
     int error;
     // transform data
-    char *content = readContent(descriptor, size, &error);
+    char *content = readContent(status, descriptor, size, &error);
     if (error == -1) {
         free(content);
         return error;
@@ -162,8 +158,8 @@ int login(ServerStatus *status, int descriptor, int size, int index) {
     free(content);
     // send confirmation if password is correct
     if (error != 0) { // wrong password
-        sendResponse(status, '1', 1, descriptor, index);
-        return 0;
+        error = sendResponse(status, '1', 1, descriptor, index);
+        return error;
     } else {
         sendResponse(status, '1', 0, descriptor, index);
     }
@@ -177,36 +173,48 @@ int login(ServerStatus *status, int descriptor, int size, int index) {
     sqlite3_stmt *stmt = NULL;
     Channel channel;
     error = selectChannelsByUserId(status, user.id, &stmt);
-
-
     while (error == SQLITE_ROW) {
         channel.id = sqlite3_column_int(stmt, 0);
         channel.name = (char *) sqlite3_column_text(stmt, 1);
-        sendChannel(status, &channel, '7', descriptor, index);
+        error = sendChannel(status, &channel, '7', descriptor, index);
+        if (error != 0) {
+            pthread_mutex_unlock(&status->descriptorMutex[index]);
+            sqlite3_finalize(stmt);
+            return error;
+        }
         error = sqlite3_step(stmt);
     }
     if (error == SQLITE_DONE) {
         channel.id = 0;
         channel.name = "0";
-        sendChannel(status, &channel, '7', descriptor, index);
-    }
-    pthread_mutex_unlock(&status->descriptorMutex[index]);
-    if (error != SQLITE_DONE) {
+        error = sendChannel(status, &channel, '7', descriptor, index);
+    } else {
+        pthread_mutex_unlock(&status->descriptorMutex[index]);
         executeError(status, "selectChannelsByUserId", stmt);
+        sqlite3_finalize(stmt);
         return error;
     }
+    pthread_mutex_unlock(&status->descriptorMutex[index]);
     sqlite3_finalize(stmt);
+    if (error != 0) {
+        return error;
+    }
 
     // send all notifications
     int channelId;
     error = selectNoticesByUserId(status, user.id, &stmt);
     while (error == SQLITE_ROW) {
         channelId = sqlite3_column_int(stmt, 0);
-        sendNotice(status, channelId, descriptor, index);
+        error = sendNotice(status, channelId, descriptor, index);
+        if (error != 0) {
+            sqlite3_finalize(stmt);
+            return error;
+        }
         error = sqlite3_step(stmt);
     }
     if (error != SQLITE_DONE) {
         executeError(status, "selectNoticesByUserId", stmt);
+        sqlite3_finalize(stmt);
         return error;
     }
     sqlite3_finalize(stmt);
@@ -218,7 +226,7 @@ int addPost(ServerStatus *status, int descriptor, int size, int index) {
     int error;
 
     // transform data
-    char *content = readContent(descriptor, size, &error);
+    char *content = readContent(status, descriptor, size, &error);
     if (error == -1) {
         free(content);
         return error;
@@ -234,7 +242,10 @@ int addPost(ServerStatus *status, int descriptor, int size, int index) {
 
     // send confirmation
     if (error == 0) {
-        sendResponse(status, '2', 0, descriptor, index);
+        error = sendResponse(status, '2', 0, descriptor, index);
+        if (error != 0) {
+            return error;
+        }
     } else {
         sendResponse(status, '2', 1, descriptor, index);
         return error;
@@ -253,7 +264,9 @@ int addPost(ServerStatus *status, int descriptor, int size, int index) {
         // insert notification
         error = insertNotice(status, userId, post.channelId, post.id);
         if (error != SQLITE_OK) {
-            break;
+            executeError(status, "insertNotice", stmt);
+            sqlite3_finalize(stmt);
+            return error;
         }
         pthread_mutex_lock(&status->activeUsersMutex);
         for (int i = 0; i < ACTIVE_USER_LIMIT; i++) {
@@ -261,7 +274,12 @@ int addPost(ServerStatus *status, int descriptor, int size, int index) {
                 if (descriptor == status->activeUsers[i].descriptor) {
                     break;
                 } else {
-                    sendNotice(status, post.channelId, status->activeUsers[i].descriptor, index);
+                    error = sendNotice(status, post.channelId, status->activeUsers[i].descriptor, index);
+                    if (error != 0) {
+                        pthread_mutex_unlock(&status->activeUsersMutex);
+                        sqlite3_finalize(stmt);
+                        return error;
+                    }
                 }
             }
         }
@@ -281,7 +299,7 @@ int addChannel(ServerStatus *status, int descriptor, int size, int index) {
     int error;
 
     // transform data
-    char *content = readContent(descriptor, size, &error);
+    char *content = readContent(status, descriptor, size, &error);
     if (error == -1) {
         free(content);
         return error;
@@ -322,7 +340,7 @@ int addChannel(ServerStatus *status, int descriptor, int size, int index) {
         sendResponse(status, '3', 1, descriptor, index);
     }
     pthread_mutex_lock(&status->descriptorMutex[index]);
-    sendChannel(status, &channel, '7', descriptor, index);
+    error = sendChannel(status, &channel, '7', descriptor, index);
     pthread_mutex_unlock(&status->descriptorMutex[index]);
     free(content);
     return error;
@@ -332,7 +350,7 @@ int subscribeChannel(ServerStatus *status, int descriptor, int size, int index) 
     int error;
 
     // transform data
-    char *content = readContent(descriptor, size, &error);
+    char *content = readContent(status, descriptor, size, &error);
     if (error == -1) {
         free(content);
         return error;
@@ -346,7 +364,7 @@ int subscribeChannel(ServerStatus *status, int descriptor, int size, int index) 
 
     // send confirmation
     if (error == 0) {
-        sendResponse(status, '4', 0, descriptor, index);
+        error = sendResponse(status, '4', 0, descriptor, index);
     } else {
         sendResponse(status, '4', 1, descriptor, index);
     }
@@ -357,7 +375,7 @@ int unsubscribeChannel(ServerStatus *status, int descriptor, int size, int index
     int error;
 
     // transform data
-    char *content = readContent(descriptor, size, &error);
+    char *content = readContent(status, descriptor, size, &error);
     if (error == -1) {
         free(content);
         return error;
@@ -379,7 +397,7 @@ int unsubscribeChannel(ServerStatus *status, int descriptor, int size, int index
 
     // send confirmation
     if (error == 0) {
-        sendResponse(status, '5', 0, descriptor, index);
+        error = sendResponse(status, '5', 0, descriptor, index);
     } else {
         sendResponse(status, '5', 1, descriptor, index);
     }
@@ -390,7 +408,7 @@ int getPostByChannelId(ServerStatus *status, int descriptor, int size, int index
     int error;
 
     // transform data
-    char *content = readContent(descriptor, size, &error);
+    char *content = readContent(status, descriptor, size, &error);
     if (error == -1) {
         free(content);
         return error;
@@ -407,20 +425,31 @@ int getPostByChannelId(ServerStatus *status, int descriptor, int size, int index
         post.id = sqlite3_column_int(stmt, 0);
         post.userName = (char *) sqlite3_column_text(stmt, 1);
         post.content = (char *) sqlite3_column_text(stmt, 2);
-        sendPost(status, &post, descriptor, index);
+        error = sendPost(status, &post, descriptor, index);
+        if (error != 0) {
+            pthread_mutex_unlock(&status->descriptorMutex[index]);
+            sqlite3_finalize(stmt);
+            return error;
+        }
         error = sqlite3_step(stmt);
     }
     if (error == SQLITE_DONE) {
         post.id = 0;
         post.userName = "0";
         post.content = "0";
-        sendPost(status, &post, descriptor, index);
-    }
-    pthread_mutex_unlock(&status->descriptorMutex[index]);
-    if (error != SQLITE_DONE) {
+        error = sendPost(status, &post, descriptor, index);
+        if (error != 0) {
+            pthread_mutex_unlock(&status->descriptorMutex[index]);
+            sqlite3_finalize(stmt);
+            return error;
+        }
+    } else {
+        pthread_mutex_unlock(&status->descriptorMutex[index]);
         executeError(status, "selectPostByChannelId", stmt);
+        sqlite3_finalize(stmt);
         return error;
     }
+    pthread_mutex_unlock(&status->descriptorMutex[index]);
     sqlite3_finalize(stmt);
 
     // delete invalid notifications
@@ -439,21 +468,29 @@ int getAllChannels(ServerStatus *status, int descriptor, int index) {
     while (error == SQLITE_ROW) {
         channel.id = sqlite3_column_int(stmt, 0);
         channel.name = (char *) sqlite3_column_text(stmt, 1);
-        sendChannel(status, &channel, '9', descriptor, index);
+        error = sendChannel(status, &channel, '9', descriptor, index);
+        if (error != 0) {
+            pthread_mutex_unlock(&status->descriptorMutex[index]);
+            sqlite3_finalize(stmt);
+            return error;
+        }
         error = sqlite3_step(stmt);
     }
     if (error == SQLITE_DONE) {
         channel.id = 0;
         channel.name = "0";
-        sendChannel(status, &channel, '9', descriptor, index);
+        error = sendChannel(status, &channel, '9', descriptor, index);
+        if (error != 0) {
+            pthread_mutex_unlock(&status->descriptorMutex[index]);
+            sqlite3_finalize(stmt);
+            return error;
+        }
+    } else {
+        executeError(status, "selectChannelsByUserId", stmt);
     }
     pthread_mutex_unlock(&status->descriptorMutex[index]);
-    if (error != SQLITE_DONE) {
-        executeError(status, "selectChannelsByUserId", stmt);
-        return error;
-    }
     sqlite3_finalize(stmt);
-    return 0;
+    return error;
 }
 
 int sendNotice(ServerStatus *status, int channelId, int descriptor, int index) {
@@ -468,9 +505,11 @@ int sendNotice(ServerStatus *status, int channelId, int descriptor, int index) {
     if (error < 0) {
         fprintf(stderr, "%s: Error during sending Notice %s to user with ID %d: %d\n",
                 status->programName, response, status->activeUsers[index].id, error);
+        free(response);
+        return error;
     }
     free(response);
-    return error;
+    return 0;
 }
 
 int sendChannel(ServerStatus *status, Channel *channel, char requestType, int descriptor, int index) {
@@ -485,9 +524,11 @@ int sendChannel(ServerStatus *status, Channel *channel, char requestType, int de
     if (error < 0) {
         fprintf(stderr, "%s: Error during sending Channel %s to user with ID %d: %d\n",
                 status->programName, response, status->activeUsers[index].id, error);
+        free(response);
+        return error;
     }
     free(response);
-    return error;
+    return 0;
 }
 
 int sendPost(ServerStatus *status, Post *post, int descriptor, int index) {
@@ -503,9 +544,11 @@ int sendPost(ServerStatus *status, Post *post, int descriptor, int index) {
     if (error < 0) {
         fprintf(stderr, "%s: Error during sending Response %s to user with ID %d: %d\n",
                 status->programName, response, status->activeUsers[index].id, error);
+        free(response);
+        return error;
     }
     free(response);
-    return error;
+    return 0;
 }
 
 int sendResponse(ServerStatus *status, char type, int fail, int descriptor, int index) {
@@ -518,12 +561,14 @@ int sendResponse(ServerStatus *status, char type, int fail, int descriptor, int 
     if (error < 0) {
         fprintf(stderr, "%s: Error during sending Response %s to user with ID %d: %d\n",
                 status->programName, response, status->activeUsers[index].id, error);
+        free(response);
+        return error;
     }
     free(response);
-    return error;
+    return 0;
 }
 
-char *readContent(int descriptor, int size, int *error) {
+char *readContent(ServerStatus *status, int descriptor, int size, int *error) {
     char *content = (char *) malloc(sizeof(char) * (size+1));
     char textBuffer[101];
     memset(textBuffer, 0, 101);
@@ -534,10 +579,14 @@ char *readContent(int descriptor, int size, int *error) {
         counter += *error;
         size -= *error;
         readByte = size < 100 ? size : 100;
-        if (size == 0 || *error == -1) {
+        if (size == 0) {
             break;
         }
         memset(textBuffer, 0, 100);
+    }
+    if (*error == -1) {
+        fprintf(stderr, "%s: Error during reading content: %d\n",
+                status->programName, *error);
     }
     return content;
 }

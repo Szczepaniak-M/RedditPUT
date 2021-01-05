@@ -36,7 +36,7 @@ int sendPost(ServerStatus *status, Post *post, int descriptor, int index);
 
 int sendResponse(ServerStatus *status, char type, int fail, int descriptor, int index);
 
-char* readContent(int descriptor, int size, int *error);
+char* readContent(ServerStatus *status, int descriptor, int size, int *error);
 
 void clear(char *requestType, int *charCounter, int *delimiterCounter, char *sizeBuffer);
 
