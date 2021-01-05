@@ -28,6 +28,7 @@ public class CommunicationThread implements Runnable {
     private List<Waiting> waitingForConfirmation = new ArrayList<>();
     private long timeGap;
     private Instant now;
+    private ObservableList<String> errors;
 
     public CommunicationThread() {
     }
@@ -116,9 +117,15 @@ public class CommunicationThread implements Runnable {
             System.out.println("End of CommunicationThread");
         } catch (IOException ex) {
             System.out.println("Server not found: " + ex.getMessage());
+            synchronized(errors) {
+            	errors.addAll("Lost connection", "We lost connection with the server. For safety reasons please logout.");            
+            }            
         } catch (Exception ex) {
             ex.printStackTrace();
             System.out.println("Unknown exception");
+            synchronized(errors) {
+            	errors.addAll("Unknown", "Unknown error occured");
+            }
         }
     }
 
@@ -309,7 +316,9 @@ public class CommunicationThread implements Runnable {
               posts.add(msg);
     		}
     	} else {
-    		//TODO: error msg
+    		synchronized (errors) {
+				errors.addAll("Post error", "Sorry, we couldn't add your post");
+			}
     	}
     }
     
@@ -321,7 +330,9 @@ public class CommunicationThread implements Runnable {
     		}
     	}
     	if(code.equals("1")) {    		
-    		//TODO: error msg
+    		synchronized (errors) {
+				errors.addAll("Add channel error", "Sorry, we couldn't add this channel. It's name is already taken");
+			}
     	}
     }
     
@@ -341,7 +352,9 @@ public class CommunicationThread implements Runnable {
     	if(code.equals("0")) {    		
     		channels.add(new Channel(channelID, channelName));
     	} else {
-    		//TODO: error msg
+    		synchronized (errors) {
+				errors.addAll("Subscribe error", "Sorry, we couldn't subscribe you for this channel. Please log out and log in to refresh session");
+			}
     	}
     }
     
@@ -353,7 +366,9 @@ public class CommunicationThread implements Runnable {
     		}
     	}
     	if(code.equals("1")) {    		
-    		System.out.println("Error while unsubscribing");
+    		synchronized (errors) {
+				errors.addAll("Unbscribe error", "Sorry, we couldn't unsubscribe you from this channel. Please log out and log in to refresh session");
+			}
     	}
     }
     
@@ -396,6 +411,9 @@ public class CommunicationThread implements Runnable {
     	String[] splitted = msg.split(";");
     	String author = splitted[1];
     	String content = splitted[2];
+    	if(splitted[0].equals("0")) {
+    		return;
+    	}
     	synchronized (posts) {
             Platform.runLater(() -> {
     		posts.add(author + " said:");
@@ -472,18 +490,20 @@ public class CommunicationThread implements Runnable {
         	if (!subscribed) {
         		tmp.add(response);
         	}	
+        }  
+        if(tmp.isEmpty()) {
+        	tmp.add("0;0");
         }
-        if (!tmp.isEmpty()) {
-        	synchronized (availableChannels) {
-        		availableChannels.clear();
-        		availableChannels.addAll(tmp);
-        	}
+        synchronized (availableChannels) {
+        	availableChannels.clear();
+        	availableChannels.addAll(tmp);
         }
     }
 
-    public void setObservables(ObservableList<String> posts, ObservableList<String> numberOfNewMsgs) {
+    public void setObservables(ObservableList<String> posts, ObservableList<String> numberOfNewMsgs, ObservableList<String> errors) {
         this.posts = posts;
         this.numberOfNewMsgs = numberOfNewMsgs;
+        this.errors = errors;
     }
 
     public List<String> getPosts() {
