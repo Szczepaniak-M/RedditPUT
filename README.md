@@ -2,8 +2,8 @@
 Simple publish/subcribe system. 
 
 ## Main information
-- Client program use JavaFx.
-- Server program use C, pthreads and BSD sockets.
+- Client program use Java 11 and JavaFx.
+- Server program use C, pthreads, BSD sockets and SQLite3.
 - Each client can write messages on channels.
 - When there are new messages on channels, which client subscribes, the client gets notification about it.
 
