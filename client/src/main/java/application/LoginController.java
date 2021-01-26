@@ -67,7 +67,7 @@ public class LoginController implements Initializable {
         } else if (!tfPassword.getText().matches("[a-zA-Z0-9!@#$%&*()_+=|<>?{}\\\\[\\\\]~-]+")) {
             createErrorDialog("Password must contain only latin characters, numbers or special characters");
             return;
-        }else if (!tfServerAddress.getText().matches("[a-zA-Z0-9!@#$%&*()_+=|<>?{}\\\\[\\\\]~-]+")) {
+        }else if (!tfServerAddress.getText().matches("[a-zA-Z0-9!@#$%&*.()_+=|<>?{}\\\\[\\\\]~-]+")) {
             createErrorDialog("Server Address must contain only latin characters, numbers or special characters");
             return;
         }
@@ -112,7 +112,7 @@ public class LoginController implements Initializable {
     private void redirectToMainScene() throws IOException {
         //pass references to another controller
         MainController mainController = new MainController();
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("../MainWindow.fxml"));
+        FXMLLoader loader = new FXMLLoader(getClass().getClassLoader().getResource("MainWindow.fxml"));
         mainController.initData(communicationThread, communicationContainer);
         loader.setController(mainController);
 

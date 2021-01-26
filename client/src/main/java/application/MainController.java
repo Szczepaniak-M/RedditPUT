@@ -167,7 +167,7 @@ public class MainController implements Initializable {
                     if (change.wasAdded()) {
                         synchronized (posts) {
                             postsIndex = posts.size();
-                            listViewMessages.scrollTo(postsIndex);
+                            Platform.runLater(() ->listViewMessages.scrollTo(postsIndex));
                         }
                     }
                 }
@@ -185,7 +185,7 @@ public class MainController implements Initializable {
     public void btnAddChannelClickListener() {
         Dialog dialog = getTextDialog("Add channel", "Enter channel name");
         Optional<String> result = dialog.showAndWait();
-        if (result.isPresent() && result.get().matches("[a-zA-Z0-9!@#$%&*()_+=|<>?{}\\\\[\\\\]~-]+")) {
+        if (result.isPresent() && result.get().matches("[a-zA-Z0-9!@#$%&* .;()_+=|<>?{}\\\\[\\\\]~-]+")) {
             if (!result.get().equals("")) {
                 String request = result.get().length() + ";3;" + result.get();
                 synchronized (communicationContainer) {
@@ -263,14 +263,14 @@ public class MainController implements Initializable {
         communicationContainer.add(";logout;");
         System.out.println("Log Out");
         //load login scene
-        Pane pane = FXMLLoader.load(getClass().getResource("../../resources/LoginWindow.fxml"));
+        Pane pane = FXMLLoader.load(getClass().getClassLoader().getResource("LoginWindow.fxml"));
         rootPane.getChildren().setAll(pane);
     }
 
     @FXML
     public void sendBtnOnClickListener() {
         String content = tfMessage.getText();
-        if (content.matches("[a-zA-Z0-9!@#$%&*()_+=|<>?{}\\\\[\\\\]~-]+")) {
+        if (content.matches("[a-zA-Z0-9!@#$%&*()_+=|<> .?{}\\\\[\\\\]~-]+")) {
             String channelName = currentChannel.getText();
             if (!channelName.isEmpty() && !content.isEmpty())
                 synchronized (communicationContainer) {
